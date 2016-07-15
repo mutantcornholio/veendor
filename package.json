@@ -1,0 +1,19 @@
+{
+  "name": "veendor",
+  "version": "0.0.0",
+  "description": "a tool for vendoring your npm dependencies into a git repository",
+  "main": "veendor.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mutantcornholio/veendor"
+  },
+  "author": "cornholio <0@mcornholio.ru>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mutantcornholio/veendor/issues"
+  },
+  "homepage": "https://github.com/mutantcornholio/veendor"
+}
