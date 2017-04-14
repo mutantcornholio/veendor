@@ -2,9 +2,12 @@
   "name": "veendor",
   "version": "0.0.0",
   "description": "a tool for vendoring your npm dependencies into a git repository",
-  "main": "veendor.js",
+  "main": "bin/veendor.js",
+  "bin": {
+    "veendor": "./bin/veendor.js"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
@@ -15,5 +18,18 @@
   "bugs": {
     "url": "https://github.com/mutantcornholio/veendor/issues"
   },
-  "homepage": "https://github.com/mutantcornholio/veendor"
+  "homepage": "https://github.com/mutantcornholio/veendor",
+  "dependencies": {
+    "commander": "^2.9.0",
+    "lodash": "^4.14.1",
+    "mz": "^2.6.0"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "chai-as-promised": "^6.0.0",
+    "mocha": "^2.5.3",
+    "mock-fs": "^4.2.0",
+    "mock-require": "^1.3.0",
+    "sinon": "^1.17.5"
+  }
 }
