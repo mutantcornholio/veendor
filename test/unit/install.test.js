@@ -7,6 +7,7 @@ const path = require('path');
 
 const install = require('../../lib/install');
 const pkgJson = require('../../lib/pkgjson');
+const backendsErrors = require('../../lib/backends/errors');
 
 const assert = chai.assert;
 chai.use(chaiAsPromised);
@@ -20,6 +21,16 @@ const PKGJSON = {
     }
 };
 
+const fakeSha1 = '1234567890deadbeef1234567890';
+
+const fakeBackends = [
+    {
+        pull: sinon.spy(pkgJson => Promise.reject(new backendsErrors.BundleNotFoundError))
+    },
+    {
+        pull: sinon.spy(pkgJson => Promise.resolve())
+    },
+];
 
 describe('install', () => {
     beforeEach(() => {
@@ -68,7 +79,20 @@ describe('install', () => {
         }, done);
     });
 
-    xit('should call `pull` on all backends until any backend succedes');
+    it('should call `pull` on all backends until any backend succedes', done => {
+        sinon.stub(pkgJson, 'calcHash', function () {
+            return fakeSha1;
+        });
+
+        install({
+            pkgJson: PKGJSON,
+            config: {backends: fakeBackends}
+        }).then(() => {
+            assert(fakeBackends[0].pull.calledWith(fakeSha1));
+            assert(fakeBackends[1].pull.calledWith(fakeSha1));
+            done();
+        }, done);
+    });
 
     xit('should look in useGitHistory.depth entries');
 
