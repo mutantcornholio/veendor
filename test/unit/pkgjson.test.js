@@ -32,7 +32,7 @@ describe('pkgjson', function () {
         };
 
         before(function () {
-            sinon.stub(crypto, 'createHash', function () {
+            sinon.stub(crypto, 'createHash').callsFake(function () {
                 return fakeSha1;
             });
         });

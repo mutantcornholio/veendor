@@ -1,9 +1,6 @@
 const assert = require('chai').assert;
 const sinon = require('sinon');
 const validateConfig = require('../../lib/validateConfig');
-const it = require("mocha/lib/mocha.js").it;
-const describe = require('mocha/lib/mocha.js').describe;
-const beforeEach = require('mocha/lib/mocha.js').beforeEach;
 
 let config;
 
