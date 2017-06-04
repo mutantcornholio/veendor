@@ -8,7 +8,7 @@ const _ = require('lodash');
 
 const install = require('../../lib/install');
 const pkgJson = require('../../lib/pkgjson');
-const gitWrapper = require('../../lib/gitWrapper');
+const gitWrapper = require('../../lib/commandWrappers/gitWrapper');
 const backendsErrors = require('../../lib/backends/errors');
 
 const assert = chai.assert;
@@ -50,49 +50,58 @@ describe('install', () => {
 
     it('should fail if node_modules already exist', done => {
         mockfs({
-            'node_modules': {}
+            'node_modules': {},
+            'package.json': JSON.stringify(PKGJSON)
         });
 
-        const result = install({pkgJson: PKGJSON});
+        const result = install({config: {}});
 
         assert.isRejected(result, install.NodeModulesAlreadyExistError).notify(done);
     });
 
     it('should delete node_modules, if force option is used', done => {
         mockfs({
-            'node_modules': {}
+            'node_modules': {},
+            'package.json': JSON.stringify(PKGJSON)
         });
 
         const nodeModules = path.join(process.cwd(), 'node_modules');
 
         sandbox.spy(fsz, 'rmdir');
 
-        const result = install({pkgJson: PKGJSON, force: true, config: {backends: fakeBackends}}).then(() => {
+        const result = install({force: true, config: {backends: fakeBackends}}).then(() => {
             assert(fsz.rmdir.calledWith(nodeModules));
             done();
         }, done);
     });
 
     it('should fail if pkgJson is not supplied', done => {
-        const result = install({});
+        const result = install({config: {}});
 
-        assert.isRejected(result, install.EmptyPkgJsonError).notify(done);
+        assert.isRejected(result).notify(done);
     });
 
     it('should call pkgjson with package.json contents first', done => {
+        mockfs({
+            'package.json': JSON.stringify(PKGJSON)
+        });
+
         sandbox.spy(pkgJson, 'calcHash');
 
-        const result = install({pkgJson: PKGJSON, config: {backends: fakeBackends}}).then(() => {
+        const result = install({config: {backends: fakeBackends}}).then(() => {
             assert(pkgJson.calcHash.calledWith(PKGJSON));
             done();
         }, done);
     });
 
     it('should call `pull` on all backends until any backend succedes', done => {
+        mockfs({
+            'package.json': JSON.stringify(PKGJSON)
+        });
+
         sandbox.stub(pkgJson, 'calcHash').returns(fakeSha1);
 
         install({
-            pkgJson: PKGJSON,
             config: {backends: fakeBackends}
         }).then(() => {
             assert(fakeBackends[0].pull.calledWith(fakeSha1));
@@ -102,22 +111,29 @@ describe('install', () => {
     });
 
     it('should reject with BundlesNotFoundError if no backend succeded with pull', done => {
+        mockfs({
+            'package.json': JSON.stringify(PKGJSON)
+        });
+
         sandbox.stub(pkgJson, 'calcHash').returns(fakeSha1);
 
         const result = install({
-            pkgJson: PKGJSON,
             config: {backends: [fakeBackends[0], fakeBackends[0]]}
         });
 
         assert.isRejected(result, install.BundlesNotFoundError).notify(done);
     });
 
-    xit('should look in useGitHistory.depth entries', (done) => {
-        const fakePkgJson1 = Object.assign({}, PKGJSON);
+    it('should look in useGitHistory.depth entries', (done) => {
+        mockfs({
+            'package.json': JSON.stringify(PKGJSON)
+        });
+
+        let fakePkgJson1 = _.cloneDeep(PKGJSON);
         fakePkgJson1.dependencies.c = '2.2.8';
 
-        const fakePkgJson2 = Object.assign({}, PKGJSON);
-        fakePkgJson1.dependencies.c = '2.1.8';
+        let fakePkgJson2 = _.cloneDeep(PKGJSON);
+        fakePkgJson2.dependencies.c = '2.1.8';
 
         sandbox.stub(pkgJson, 'calcHash').callsFake(_pkgJson => {
             if (_.isEqual(_pkgJson, fakePkgJson1)) {
@@ -131,24 +147,36 @@ describe('install', () => {
             throw new Error('Something is unmocked');
         });
 
-        sandbox.mock(gitWrapper, 'olderRevision').callsFake((filename, age) => {
-            if (age === 2) {
-                return Promise.resolve(JSON.stringify(fakePkgJson1));
-            } else if (age === 3) {
-                return Promise.resolve(JSON.stringify(fakePkgJson2));
-            }
-        });
+        const gitWrapperMock = sandbox.mock(gitWrapper);
+
+        gitWrapperMock.expects('olderRevision')
+            .withArgs(sinon.match(/package\.json$/), 2)
+            .resolves(JSON.stringify(fakePkgJson1));
+
+        gitWrapperMock.expects('olderRevision')
+            .withArgs(sinon.match(/package\.json$/), 3)
+            .resolves(JSON.stringify(fakePkgJson2));
 
         const result = install({
-            pkgJson: PKGJSON,
-            config: {backends: [fakeBackends[0]]},
-            useGitHistory: {
-                depth: 2
+            config: {
+                backends: [fakeBackends[0]],
+                useGitHistory: {
+                    depth: 2
+                }
             }
         });
 
-        assert(gitWrapper.olderRevision.calledWith('package.json', 2));
-        assert(gitWrapper.olderRevision.calledWith('package.json', 3));
+        const checkResult = () => {
+            try {
+                gitWrapperMock.verify();
+            } catch (error) {
+                return done(error);
+            }
+
+            done();
+        };
+
+        result.then(checkResult, checkResult);
     });
 
     xit('should call pkgjson with older package.json revision');
@@ -158,9 +186,9 @@ describe('install', () => {
     xit('should not call gitWrapper.olderRevision if not in git repo');
 
     xit('should call `npmWrapper.install` with diff between package.json\'s after successful pull of history bundle');
-    xit('should call `push` on a backend with push: true option after partial npm install');
+    xit('should call `push` on all backends with push: true option after partial npm install');
 
     xit('should call `npmWrapper.installAll` if no backend succeded');
     xit('should not call `npmWrapper.installAll` if fallbackToNpm set to false');
-    xit('should call `push` on a backend with push: true option after npm install');
+    xit('should call `push` on all backends with push: true option after npm install');
 });

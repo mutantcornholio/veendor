@@ -11,14 +11,14 @@ describe('validateConfig', function () {
         };
     });
 
-    it('should throws error if config does not contain \'backends\' section', () => {
+    it('should throw error if config does not contain \'backends\' section', () => {
         delete config.backends;
         assert.throws(() => {
             validateConfig(config);
         }, validateConfig.EmptyBackendsPropertyError);
     });
 
-    it('should throws error if \'backends\' section is empty', () => {
+    it('should throw error if \'backends\' section is empty', () => {
         config.backends = [];
 
         assert.throws(() => {
@@ -26,9 +26,8 @@ describe('validateConfig', function () {
         }, validateConfig.EmptyBackendsPropertyError);
     });
 
-    xit('should throw error if more than single backend has push option');
-    xit('should if any backend has push option, but it not the last one');
     xit('sets fallbackToNpm to true');
     xit('sets installOnlyDiff to true');
     xit('sets packageHash to {}');
+    xit('should throw error if useGetHistory is set without depth option');
 });
