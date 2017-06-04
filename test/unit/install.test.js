@@ -124,63 +124,107 @@ describe('install', () => {
         assert.isRejected(result, install.BundlesNotFoundError).notify(done);
     });
 
-    it('should look in useGitHistory.depth entries', (done) => {
-        mockfs({
-            'package.json': JSON.stringify(PKGJSON)
-        });
+    describe('_', () => {
+        let fakePkgJson1;
+        let fakePkgJson2;
+        let pkgJsonStub;
+        let gitWrapperStub;
 
-        let fakePkgJson1 = _.cloneDeep(PKGJSON);
-        fakePkgJson1.dependencies.c = '2.2.8';
+        beforeEach(() => {
+            mockfs({
+                'package.json': JSON.stringify(PKGJSON)
+            });
 
-        let fakePkgJson2 = _.cloneDeep(PKGJSON);
-        fakePkgJson2.dependencies.c = '2.1.8';
+            fakePkgJson1 = _.cloneDeep(PKGJSON);
+            fakePkgJson1.dependencies.c = '2.2.8';
 
-        sandbox.stub(pkgJson, 'calcHash').callsFake(_pkgJson => {
-            if (_.isEqual(_pkgJson, fakePkgJson1)) {
-                return 'fakePkgJson1Hash';
-            } else if (_.isEqual(_pkgJson, fakePkgJson2)) {
-                return 'fakePkgJson2Hash';
-            } else if (_.isEqual(_pkgJson, PKGJSON)) {
-                return 'PKGJSONHash';
-            }
+            fakePkgJson2 = _.cloneDeep(PKGJSON);
+            fakePkgJson2.dependencies.c = '2.1.8';
 
-            throw new Error('Something is unmocked');
-        });
-
-        const gitWrapperMock = sandbox.mock(gitWrapper);
-
-        gitWrapperMock.expects('olderRevision')
-            .withArgs(sinon.match(/package\.json$/), 2)
-            .resolves(JSON.stringify(fakePkgJson1));
-
-        gitWrapperMock.expects('olderRevision')
-            .withArgs(sinon.match(/package\.json$/), 3)
-            .resolves(JSON.stringify(fakePkgJson2));
-
-        const result = install({
-            config: {
-                backends: [fakeBackends[0]],
-                useGitHistory: {
-                    depth: 2
+            pkgJsonStub = sandbox.stub(pkgJson, 'calcHash').callsFake(_pkgJson => {
+                if (_.isEqual(_pkgJson, fakePkgJson1)) {
+                    return 'fakePkgJson1Hash';
+                } else if (_.isEqual(_pkgJson, fakePkgJson2)) {
+                    return 'fakePkgJson2Hash';
+                } else if (_.isEqual(_pkgJson, PKGJSON)) {
+                    return 'PKGJSONHash';
                 }
-            }
+
+                throw new Error('Something is unmocked');
+            });
+
+            gitWrapperStub = sandbox.stub(gitWrapper, 'olderRevision').callsFake((filename, age) => {
+                if (age === 2) {
+                    return Promise.resolve(JSON.stringify(fakePkgJson1));
+                } else if (age === 3) {
+                    return Promise.resolve(JSON.stringify(fakePkgJson2));
+                }
+            });
         });
 
-        const checkResult = () => {
-            try {
-                gitWrapperMock.verify();
-            } catch (error) {
-                return done(error);
-            }
+        it('should look in useGitHistory.depth entries', (done) => {
+            gitWrapperStub.restore();
+            const gitWrapperMock = sandbox.mock(gitWrapper);
 
-            done();
-        };
+            gitWrapperMock.expects('olderRevision')
+                .withArgs(sinon.match(/package\.json$/), 2)
+                .resolves(JSON.stringify(fakePkgJson1));
 
-        result.then(checkResult, checkResult);
+            gitWrapperMock.expects('olderRevision')
+                .withArgs(sinon.match(/package\.json$/), 3)
+                .resolves(JSON.stringify(fakePkgJson2));
+
+            const result = install({
+                config: {
+                    backends: [fakeBackends[0]],
+                    useGitHistory: {
+                        depth: 2
+                    }
+                }
+            });
+
+            const checkResult = checkMockResult.bind(null, gitWrapperMock, done);
+
+            result.then(checkResult, checkResult);
+        });
+
+        it('should call pkgjson with older package.json revision', done => {
+            pkgJsonStub.restore();
+            const pkgJsonMock = sandbox.mock(pkgJson);
+
+            pkgJsonMock.expects('calcHash').withArgs(PKGJSON).returns('PKGJSONHash');
+            pkgJsonMock.expects('calcHash').withArgs(fakePkgJson1).returns('fakePkgJson1Hash');
+
+            const checkResult = checkMockResult.bind(null, pkgJsonMock, done);
+
+            install({
+                config: {
+                    backends: [fakeBackends[0]],
+                    useGitHistory: {
+                        depth: 1
+                    }
+                }
+            }).then(checkResult, checkResult);
+        });
+
+        it('should call `pull` on backends with gitWrapper.olderRevision\'s hash', done => {
+            const fakeBackend = {pull: () => {}};
+            const backendMock = sandbox.mock(fakeBackend);
+            backendMock.expects('pull').withArgs('PKGJSONHash').rejects(new backendsErrors.BundleNotFoundError);
+            backendMock.expects('pull').withArgs('fakePkgJson1Hash').resolves();
+
+            const checkResult = checkMockResult.bind(null, backendMock, done);
+
+            install({
+                config: {
+                    backends: [fakeBackend],
+                    useGitHistory: {
+                        depth: 1
+                    }
+                }
+            }).then(checkResult, checkResult);
+        });
     });
-
-    xit('should call pkgjson with older package.json revision');
-    xit('should call `pull` on backends with gitWrapper.olderRevision\'s hash');
 
     xit('should not call gitWrapper.olderRevision if useGitHistory.depth is not defined');
     xit('should not call gitWrapper.olderRevision if not in git repo');
@@ -192,3 +236,13 @@ describe('install', () => {
     xit('should not call `npmWrapper.installAll` if fallbackToNpm set to false');
     xit('should call `push` on all backends with push: true option after npm install');
 });
+
+function checkMockResult(mock, done) {
+    try {
+        mock.verify();
+    } catch (error) {
+        return done(error);
+    }
+
+    done();
+}
