@@ -9,6 +9,7 @@ const _ = require('lodash');
 const install = require('../../lib/install');
 const pkgJson = require('../../lib/pkgjson');
 const gitWrapper = require('../../lib/commandWrappers/gitWrapper');
+const npmWrapper = require('../../lib/commandWrappers/npmWrapper');
 const backendsErrors = require('../../lib/backends/errors');
 
 const assert = chai.assert;
@@ -16,7 +17,8 @@ chai.use(chaiAsPromised);
 
 const PKGJSON = {
     dependencies: {
-        foo: '2.2.8'
+        foo: '2.2.8',
+        c: '2.2.9'
     },
     devDependencies: {
         baz: '6.6.6'
@@ -129,6 +131,7 @@ describe('install', () => {
         let fakePkgJson2;
         let pkgJsonStub;
         let gitWrapperStub;
+        let npmWrapperStub;
 
         beforeEach(() => {
             mockfs({
@@ -136,7 +139,7 @@ describe('install', () => {
             });
 
             fakePkgJson1 = _.cloneDeep(PKGJSON);
-            fakePkgJson1.dependencies.c = '2.2.8';
+            fakePkgJson1.dependencies.c = '1.0.0';
 
             fakePkgJson2 = _.cloneDeep(PKGJSON);
             fakePkgJson2.dependencies.c = '2.1.8';
@@ -160,6 +163,8 @@ describe('install', () => {
                     return Promise.resolve(JSON.stringify(fakePkgJson2));
                 }
             });
+
+            npmWrapperStub = sandbox.stub(npmWrapper, 'install').callsFake(() => Promise.resolve());
         });
 
         it('should look in useGitHistory.depth entries', (done) => {
@@ -224,17 +229,46 @@ describe('install', () => {
                 }
             }).then(checkResult, checkResult);
         });
+
+        xit('should not call gitWrapper.olderRevision if useGitHistory.depth is not defined');
+        xit('should not call gitWrapper.olderRevision if not in git repo');
+
+        it('should call `npmWrapper.install` with diff between package.json\'s ' +
+            'after successful pull of history bundle', done => {
+            const fakeBackend = {pull: (hash) => {
+                if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
+                    return Promise.reject(new backendsErrors.BundleNotFoundError);
+                } else if (hash === 'fakePkgJson2Hash') {
+                    return Promise.resolve();
+                } else {
+                    throw new Error('Something is unmocked');
+                }
+            }};
+
+            npmWrapperStub.restore();
+            const npmWrapperMock = sandbox.mock(npmWrapper);
+            npmWrapperMock.expects('install').withArgs({c: '2.2.9'}).resolves();
+
+            const checkResult = checkMockResult.bind(null, npmWrapperMock, done);
+
+            install({
+                config: {
+                    backends: [fakeBackend],
+                    useGitHistory: {
+                        depth: 2
+                    }
+                }
+            }).then(checkResult, checkResult);
+        });
+
+        xit('should call `npmWrapper.uninstall` for deleted modules');
+
+        xit('should call `push` on all backends with push: true option after partial npm install');
+
+        xit('should call `npmWrapper.installAll` if no backend succeded');
+        xit('should not call `npmWrapper.installAll` if fallbackToNpm set to false');
+        xit('should call `push` on all backends with push: true option after npm install');
     });
-
-    xit('should not call gitWrapper.olderRevision if useGitHistory.depth is not defined');
-    xit('should not call gitWrapper.olderRevision if not in git repo');
-
-    xit('should call `npmWrapper.install` with diff between package.json\'s after successful pull of history bundle');
-    xit('should call `push` on all backends with push: true option after partial npm install');
-
-    xit('should call `npmWrapper.installAll` if no backend succeded');
-    xit('should not call `npmWrapper.installAll` if fallbackToNpm set to false');
-    xit('should call `push` on all backends with push: true option after npm install');
 });
 
 function checkMockResult(mock, done) {

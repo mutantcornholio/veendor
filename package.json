@@ -21,6 +21,7 @@
   "homepage": "https://github.com/mutantcornholio/veendor",
   "dependencies": {
     "commander": "^2.9.0",
+    "deep-object-diff": "^1.0.4",
     "lodash": "^4.14.1",
     "mz": "^2.6.0"
   },
