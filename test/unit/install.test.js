@@ -133,7 +133,8 @@ describe('install', () => {
         let fakePkgJson1;
         let fakePkgJson2;
         let pkgJsonStub;
-        let gitWrapperStub;
+        let gitWrapperOlderRevisionStub;
+        let gitWrapperIsGitRepoStub;
         let npmWrapperStub;
 
         beforeEach(() => {
@@ -159,7 +160,7 @@ describe('install', () => {
                 throw new Error('Something is unmocked');
             });
 
-            gitWrapperStub = sandbox.stub(gitWrapper, 'olderRevision').callsFake((filename, age) => {
+            gitWrapperOlderRevisionStub = sandbox.stub(gitWrapper, 'olderRevision').callsFake((filename, age) => {
                 if (age === 2) {
                     return Promise.resolve(JSON.stringify(fakePkgJson1));
                 } else if (age === 3) {
@@ -167,11 +168,13 @@ describe('install', () => {
                 }
             });
 
+            gitWrapperIsGitRepoStub = sandbox.stub(gitWrapper, 'isGitRepo').callsFake(() => Promise.resolve());
+
             npmWrapperStub = sandbox.stub(npmWrapper, 'install').callsFake(() => Promise.resolve());
         });
 
         it('should look in useGitHistory.depth entries', (done) => {
-            gitWrapperStub.restore();
+            gitWrapperOlderRevisionStub.restore();
             const gitWrapperMock = sandbox.mock(gitWrapper);
 
             gitWrapperMock.expects('olderRevision')
@@ -233,8 +236,40 @@ describe('install', () => {
             }).then(checkResult, checkResult);
         });
 
-        xit('should not call gitWrapper.olderRevision if useGitHistory.depth is not defined');
-        xit('should not call gitWrapper.olderRevision if not in git repo');
+        it('should not call gitWrapper.olderRevision if useGitHistory.depth is not defined', done => {
+            gitWrapperOlderRevisionStub.restore();
+            const gitWrapperMock = sandbox.mock(gitWrapper);
+
+            gitWrapperMock.expects('olderRevision').never();
+
+            const checkResult = checkMockResult.bind(null, gitWrapperMock, done);
+
+            install({
+                config: {
+                    backends: [fakeBackends[0]]
+                }
+            }).then(checkResult, checkResult);
+        });
+
+        it('should not call gitWrapper.olderRevision if not in git repo', done => {
+            gitWrapperOlderRevisionStub.restore();
+            gitWrapperIsGitRepoStub.restore();
+            const gitWrapperMock = sandbox.mock(gitWrapper);
+
+            gitWrapperMock.expects('isGitRepo').rejects(new gitWrapper.NotAGitRepoError);
+            gitWrapperMock.expects('olderRevision').never();
+
+            const checkResult = checkMockResult.bind(null, gitWrapperMock, done);
+
+            install({
+                config: {
+                    backends: [fakeBackends[0]],
+                    useGitHistory: {
+                        depth: 1
+                    }
+                }
+            }).then(checkResult, checkResult);
+        });
 
         it('should call `npmWrapper.install` with diff between package.json\'s ' +
             'after successful pull of history bundle', done => {
