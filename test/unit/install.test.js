@@ -15,18 +15,8 @@ const backendsErrors = require('../../lib/backends/errors');
 const assert = chai.assert;
 chai.use(chaiAsPromised);
 
-const PKGJSON = {
-    dependencies: {
-        foo: '2.2.8',
-        c: '2.2.9'
-    },
-    devDependencies: {
-        baz: '6.6.6'
-    }
-};
-
-const fakeSha1 = '1234567890deadbeef1234567890';
-
+let PKGJSON;
+let fakeSha1;
 let sandbox;
 let fakeBackends;
 
@@ -43,6 +33,19 @@ describe('install', () => {
                 pull: sandbox.spy(pkgJson => Promise.resolve())
             },
         ];
+
+        PKGJSON = {
+            dependencies: {
+                foo: '2.2.8',
+                c: '2.2.9'
+            },
+            devDependencies: {
+                baz: '6.6.6'
+            }
+        };
+
+        fakeSha1 = '1234567890deadbeef1234567890';
+
     });
 
     afterEach(() => {
@@ -261,7 +264,38 @@ describe('install', () => {
             }).then(checkResult, checkResult);
         });
 
-        xit('should call `npmWrapper.uninstall` for deleted modules');
+        it('should call `npmWrapper.uninstall` for deleted modules', done => {
+            delete PKGJSON.dependencies.c;
+
+            mockfs({
+                'package.json': JSON.stringify(PKGJSON)
+            });
+
+            const fakeBackend = {pull: (hash) => {
+                if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
+                    return Promise.reject(new backendsErrors.BundleNotFoundError);
+                } else if (hash === 'fakePkgJson2Hash') {
+                    return Promise.resolve();
+                } else {
+                    throw new Error('Something is unmocked');
+                }
+            }};
+
+            npmWrapperStub.restore();
+            const npmWrapperMock = sandbox.mock(npmWrapper);
+            npmWrapperMock.expects('uninstall').withArgs(['c']).resolves();
+
+            const checkResult = checkMockResult.bind(null, npmWrapperMock, done);
+
+            install({
+                config: {
+                    backends: [fakeBackend],
+                    useGitHistory: {
+                        depth: 2
+                    }
+                }
+            }).then(checkResult, checkResult);
+        });
 
         xit('should call `push` on all backends with push: true option after partial npm install');
 
