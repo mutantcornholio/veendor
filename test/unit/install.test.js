@@ -393,6 +393,7 @@ describe('install', () => {
             }).then(checkResult, checkResult);
         });
 
+        xit('should not call `gitWrapper.olderRevision` if installDiffOnly is false');
         xit('should call `npmWrapper.installAll` if no backend succeded');
         xit('should not call `npmWrapper.installAll` if fallbackToNpm set to false');
         xit('should call `push` on all backends with push: true option after npm install');
