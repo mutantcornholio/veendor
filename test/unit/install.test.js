@@ -103,7 +103,7 @@ describe('install', () => {
         });
 
         const pkgJsonMock = sandbox.mock(pkgJson).expects('calcHash').withArgs(PKGJSON);
-        const checkResult = checkMockResult.bind(null, pkgJsonMock, done);
+        const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
 
         const result = install({config: {backends: fakeBackends}}).then(checkResult, checkResult);
     });
@@ -124,16 +124,7 @@ describe('install', () => {
             .withArgs(fakeSha1)
             .resolves();
 
-        const checkResult = () => {
-            try {
-                fakeBackends0Mock.verify();
-                fakeBackends1Mock.verify();
-            } catch (error) {
-                return done(error);
-            }
-
-            done();
-        };
+        const checkResult = checkMockResult.bind(null, [fakeBackends0Mock, fakeBackends1Mock], done);
 
         install({
             config: {backends: fakeBackends}
@@ -156,16 +147,7 @@ describe('install', () => {
             .withArgs(sinon.match.any, sinon.match.same(fakeBackends[1].options))
             .resolves();
 
-        const checkResult = () => {
-            try {
-                fakeBackends0Mock.verify();
-                fakeBackends1Mock.verify();
-            } catch (error) {
-                return done(error);
-            }
-
-            done();
-        };
+        const checkResult = checkMockResult.bind(null, [fakeBackends0Mock, fakeBackends1Mock], done);
 
         install({
             config: {backends: fakeBackends}
@@ -251,7 +233,7 @@ describe('install', () => {
                 }
             });
 
-            const checkResult = checkMockResult.bind(null, gitWrapperMock, done);
+            const checkResult = checkMockResult.bind(null, [gitWrapperMock], done);
 
             result.then(checkResult, checkResult);
         });
@@ -263,7 +245,7 @@ describe('install', () => {
             pkgJsonMock.expects('calcHash').withArgs(PKGJSON).returns('PKGJSONHash');
             pkgJsonMock.expects('calcHash').withArgs(fakePkgJson1).returns('fakePkgJson1Hash');
 
-            const checkResult = checkMockResult.bind(null, pkgJsonMock, done);
+            const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
 
             install({
                 config: {
@@ -280,7 +262,7 @@ describe('install', () => {
             backendMock.expects('pull').withArgs('PKGJSONHash').rejects(new backendsErrors.BundleNotFoundError);
             backendMock.expects('pull').withArgs('fakePkgJson1Hash').resolves();
 
-            const checkResult = checkMockResult.bind(null, backendMock, done);
+            const checkResult = checkMockResult.bind(null, [backendMock], done);
 
             install({
                 config: {
@@ -298,7 +280,7 @@ describe('install', () => {
 
             gitWrapperMock.expects('olderRevision').never();
 
-            const checkResult = checkMockResult.bind(null, gitWrapperMock, done);
+            const checkResult = checkMockResult.bind(null, [gitWrapperMock], done);
 
             install({
                 config: {
@@ -315,7 +297,7 @@ describe('install', () => {
             gitWrapperMock.expects('isGitRepo').rejects(new gitWrapper.NotAGitRepoError);
             gitWrapperMock.expects('olderRevision').never();
 
-            const checkResult = checkMockResult.bind(null, gitWrapperMock, done);
+            const checkResult = checkMockResult.bind(null, [gitWrapperMock], done);
 
             install({
                 config: {
@@ -347,7 +329,7 @@ describe('install', () => {
             const npmWrapperMock = sandbox.mock(npmWrapper);
             npmWrapperMock.expects('install').withArgs({c: '2.2.9'}).resolves();
 
-            const checkResult = checkMockResult.bind(null, npmWrapperMock, done);
+            const checkResult = checkMockResult.bind(null, [npmWrapperMock], done);
 
             install({
                 config: {
@@ -384,7 +366,7 @@ describe('install', () => {
             const npmWrapperMock = sandbox.mock(npmWrapper);
             npmWrapperMock.expects('uninstall').withArgs(['c']).resolves();
 
-            const checkResult = checkMockResult.bind(null, npmWrapperMock, done);
+            const checkResult = checkMockResult.bind(null, [npmWrapperMock], done);
 
             install({
                 config: {
@@ -399,18 +381,13 @@ describe('install', () => {
         it('should call `push` on all backends with push: true option after partial npm install', done => {
             fakeBackends[0].push = true;
 
-            fakeBackends[1] = {
-                backend: {
-                    pull: (hash) => {
-                        if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
-                            return Promise.reject(new backendsErrors.BundleNotFoundError);
-                        } else if (hash === 'fakePkgJson2Hash') {
-                            return Promise.resolve();
-                        } else {
-                            throw new Error('Something is unmocked');
-                        }
-                    },
-                    push: () => {}
+            fakeBackends[1].backend.pull = (hash) => {
+                if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
+                    return Promise.reject(new backendsErrors.BundleNotFoundError);
+                } else if (hash === 'fakePkgJson2Hash') {
+                    return Promise.resolve();
+                } else {
+                    throw new Error('Something is unmocked');
                 }
             };
 
@@ -420,16 +397,38 @@ describe('install', () => {
             backendMock0.expects('push').withArgs('PKGJSONHash').resolves();
             backendMock1.expects('push').never();
 
-            const checkResult = () => {
-                try {
-                    backendMock0.verify();
-                    backendMock1.verify();
-                } catch (error) {
-                    return done(error);
-                }
+            const checkResult = checkMockResult.bind(null, [backendMock0, backendMock1], done);
 
-                done();
+            install({
+                config: {
+                    backends: fakeBackends,
+                    useGitHistory: {
+                        depth: 2
+                    }
+                }
+            }).then(checkResult, checkResult);
+        });
+
+        it('should pass options to `push`', done => {
+            fakeBackends[0].push = true;
+            fakeBackends[1].backend.pull = (hash) => {
+                if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
+                    return Promise.reject(new backendsErrors.BundleNotFoundError);
+                } else if (hash === 'fakePkgJson2Hash') {
+                    return Promise.resolve();
+                } else {
+                    throw new Error('Something is unmocked');
+                }
             };
+
+            const backendMock0 = sandbox.mock(fakeBackends[0].backend);
+
+            backendMock0
+                .expects('push')
+                .withArgs(sinon.match.any, sinon.match.same(fakeBackends[0].options))
+                .resolves();
+
+            const checkResult = checkMockResult.bind(null, [backendMock0], done);
 
             install({
                 config: {
@@ -450,9 +449,9 @@ describe('install', () => {
     });
 });
 
-function checkMockResult(mock, done) {
+function checkMockResult(mocks, done) {
     try {
-        mock.verify();
+        mocks.map(mock => mock.verify());
     } catch (error) {
         return done(error);
     }
