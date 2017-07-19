@@ -1,3 +1,4 @@
+const {describe, it, beforeEach, afterEach} = require('mocha');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
@@ -27,10 +28,16 @@ describe('install', () => {
 
         fakeBackends = [
             {
-                pull: sandbox.spy(pkgJson => Promise.reject(new backendsErrors.BundleNotFoundError))
+                backend: {
+                    pull: sandbox.spy(pkgJson => Promise.reject(new backendsErrors.BundleNotFoundError)),
+                    push: sandbox.spy(_ => Promise.resolve())
+                }
             },
             {
-                pull: sandbox.spy(pkgJson => Promise.resolve())
+                backend: {
+                    pull: sandbox.spy(pkgJson => Promise.resolve()),
+                    push: sandbox.spy(_ => Promise.resolve())
+                }
             },
         ];
 
@@ -109,8 +116,8 @@ describe('install', () => {
         install({
             config: {backends: fakeBackends}
         }).then(() => {
-            assert(fakeBackends[0].pull.calledWith(fakeSha1));
-            assert(fakeBackends[1].pull.calledWith(fakeSha1));
+            assert(fakeBackends[0].backend.pull.calledWith(fakeSha1));
+            assert(fakeBackends[1].backend.pull.calledWith(fakeSha1));
             done();
         }, done);
     });
@@ -219,8 +226,8 @@ describe('install', () => {
         });
 
         it('should call `pull` on backends with gitWrapper.olderRevision\'s hash', done => {
-            const fakeBackend = {pull: () => {}};
-            const backendMock = sandbox.mock(fakeBackend);
+            const fakeBackend = {backend: {pull: () => {}}};
+            const backendMock = sandbox.mock(fakeBackend.backend);
             backendMock.expects('pull').withArgs('PKGJSONHash').rejects(new backendsErrors.BundleNotFoundError);
             backendMock.expects('pull').withArgs('fakePkgJson1Hash').resolves();
 
@@ -273,15 +280,19 @@ describe('install', () => {
 
         it('should call `npmWrapper.install` with diff between package.json\'s ' +
             'after successful pull of history bundle', done => {
-            const fakeBackend = {pull: (hash) => {
-                if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
-                    return Promise.reject(new backendsErrors.BundleNotFoundError);
-                } else if (hash === 'fakePkgJson2Hash') {
-                    return Promise.resolve();
-                } else {
-                    throw new Error('Something is unmocked');
+            const fakeBackend = {
+                backend: {
+                    pull: (hash) => {
+                        if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
+                            return Promise.reject(new backendsErrors.BundleNotFoundError);
+                        } else if (hash === 'fakePkgJson2Hash') {
+                            return Promise.resolve();
+                        } else {
+                            throw new Error('Something is unmocked');
+                        }
+                    }
                 }
-            }};
+            };
 
             npmWrapperStub.restore();
             const npmWrapperMock = sandbox.mock(npmWrapper);
@@ -306,15 +317,19 @@ describe('install', () => {
                 'package.json': JSON.stringify(PKGJSON)
             });
 
-            const fakeBackend = {pull: (hash) => {
-                if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
-                    return Promise.reject(new backendsErrors.BundleNotFoundError);
-                } else if (hash === 'fakePkgJson2Hash') {
-                    return Promise.resolve();
-                } else {
-                    throw new Error('Something is unmocked');
+            const fakeBackend = {
+                backend: {
+                    pull: (hash) => {
+                        if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
+                            return Promise.reject(new backendsErrors.BundleNotFoundError);
+                        } else if (hash === 'fakePkgJson2Hash') {
+                            return Promise.resolve();
+                        } else {
+                            throw new Error('Something is unmocked');
+                        }
+                    }
                 }
-            }};
+            };
 
             npmWrapperStub.restore();
             const npmWrapperMock = sandbox.mock(npmWrapper);
@@ -332,11 +347,57 @@ describe('install', () => {
             }).then(checkResult, checkResult);
         });
 
-        xit('should call `push` on all backends with push: true option after partial npm install');
+        it('should call `push` on all backends with push: true option after partial npm install', done => {
+            fakeBackends[0].backend.push = () => {};
+            fakeBackends[0].push = true;
+
+            fakeBackends[1] = {
+                backend: {
+                    pull: (hash) => {
+                        if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
+                            return Promise.reject(new backendsErrors.BundleNotFoundError);
+                        } else if (hash === 'fakePkgJson2Hash') {
+                            return Promise.resolve();
+                        } else {
+                            throw new Error('Something is unmocked');
+                        }
+                    },
+                    push: () => {}
+                }
+            };
+
+            const backendMock0 = sandbox.mock(fakeBackends[0].backend);
+            const backendMock1 = sandbox.mock(fakeBackends[1].backend);
+
+            backendMock0.expects('push').withArgs('PKGJSONHash').resolves();
+            backendMock1.expects('push').never();
+
+            const checkResult = () => {
+                try {
+                    backendMock0.verify();
+                    backendMock1.verify();
+                } catch (error) {
+                    return done(error);
+                }
+
+                done();
+            };
+
+            install({
+                config: {
+                    backends: fakeBackends,
+                    useGitHistory: {
+                        depth: 2
+                    }
+                }
+            }).then(checkResult, checkResult);
+        });
 
         xit('should call `npmWrapper.installAll` if no backend succeded');
         xit('should not call `npmWrapper.installAll` if fallbackToNpm set to false');
         xit('should call `push` on all backends with push: true option after npm install');
+        xit('failing to push on backends without pushMayFail === true should reject install');
+        xit('failing to push on backends with pushMayFail === true should be ignored');
     });
 });
 
