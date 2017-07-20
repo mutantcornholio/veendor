@@ -85,7 +85,7 @@ describe('install', () => {
 
         sandbox.spy(fsz, 'rmdir');
 
-        const result = install({force: true, config: {backends: fakeBackends}}).then(() => {
+        install({force: true, config: {backends: fakeBackends}}).then(() => {
             assert(fsz.rmdir.calledWith(nodeModules));
             done();
         }, done);
@@ -105,7 +105,7 @@ describe('install', () => {
         const pkgJsonMock = sandbox.mock(pkgJson).expects('calcHash').withArgs(PKGJSON);
         const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
 
-        const result = install({config: {backends: fakeBackends}}).then(checkResult, checkResult);
+        install({config: {backends: fakeBackends}}).then(checkResult, checkResult);
     });
 
     it('should call `pull` on all backends until any backend succedes', done => {

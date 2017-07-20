@@ -1,3 +1,5 @@
+const {describe, it, beforeEach, afterEach} = require('mocha');
+
 const assert = require('chai').assert;
 const sinon = require('sinon');
 const validateConfig = require('../../lib/validateConfig');

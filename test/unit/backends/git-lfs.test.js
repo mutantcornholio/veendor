@@ -15,7 +15,6 @@ let fakeRepo;
 let sandbox;
 let fakeHash;
 let defaultOptions;
-let gitWrapperMock;
 
 describe('git-lfs', () => {
     beforeEach(() => {
