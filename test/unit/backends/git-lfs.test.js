@@ -3,12 +3,14 @@ const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
 const mockfs = require('mock-fs');
+const path = require('path');
 
 const assert = chai.assert;
 chai.use(chaiAsPromised);
 
 const gitLfs = require('../../../lib/backends/git-lfs');
 const gitWrapper = require('../../../lib/commandWrappers/gitWrapper');
+const tarWrapper = require('../../../lib/commandWrappers/tarWrapper');
 const errors = require('../../../lib/backends/errors');
 
 let fakeRepo;
@@ -23,12 +25,15 @@ describe('git-lfs', () => {
         sandbox = sinon.sandbox.create();
 
         defaultOptions = {
-            repo: fakeRepo
+            repo: fakeRepo,
+            compression: 'gzip'
         };
 
         sandbox.stub(gitWrapper, 'clone').resolves();
         sandbox.stub(gitWrapper, 'fetch').resolves();
         sandbox.stub(gitWrapper, 'checkout').resolves();
+        sandbox.stub(tarWrapper, 'createArchive').resolves();
+        sandbox.stub(tarWrapper, 'extractArchive').resolves();
     });
 
     afterEach(() => {
@@ -94,15 +99,30 @@ describe('git-lfs', () => {
             });
 
             gitWrapper.checkout.restore();
-            sandbox.stub(gitWrapper, 'checkout').rejects();
+            sandbox.stub(gitWrapper, 'checkout').rejects(new Error);
 
             assert
                 .isRejected(gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0'), errors.BundleNotFoundError)
                 .notify(done);
         });
 
-        xit('unpacks the archive to $(pwd)/node_modules');
-        xit('cleans decompressed archive');
+        it('unpacks the archive to $(pwd)/node_modules', done => {
+            mockfs({
+                '.veendor': {
+                    'git-lfs.0': {}
+                },
+            });
+
+            const checkResult = expectCalls.bind(null, [{
+                spy: tarWrapper.extractArchive,
+                args: [
+                    sinon.match(`.veendor/git-lfs.0/repo/${fakeHash}.tar.gz`),
+                    path.resolve(process.cwd(), 'node_modules')
+                ]
+            }], done);
+
+            gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0').then(checkResult, checkResult);
+        });
     });
 
     describe('.push', () => {
