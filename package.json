@@ -7,7 +7,7 @@
     "veendor": "./bin/veendor.js"
   },
   "scripts": {
-    "test": "mocha test/**/*.js"
+    "test": "mocha 'test/**/*.test.js'"
   },
   "repository": {
     "type": "git",

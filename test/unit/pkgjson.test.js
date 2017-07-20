@@ -64,5 +64,8 @@ describe('pkgjson', function () {
 
             assert.equal(result, FAKE_HASH);
         });
+
+        xit('should add string suffixes');
+        xit('should add function suffixes');
     });
 });

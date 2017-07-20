@@ -1,4 +1,4 @@
 # veendor
-a tool for vendoring your npm dependencies into a git repository
+a tool for vendoring your npm dependencies in arbitrary remote storage
 
 in development... stay tuned

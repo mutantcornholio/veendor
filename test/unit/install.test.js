@@ -440,6 +440,15 @@ describe('install', () => {
             }).then(checkResult, checkResult);
         });
 
+        xit('should pass npm timeout from config');
+        xit('should pass cache directory to pull');
+        xit('should pass cache directory to push');
+        xit('should create cache directory before pull');
+        xit('should create cache directory before push');
+        xit('should create clean cache directory before pull');
+        xit('should create clean cache directory before push');
+        xit('should not create clean cache directory before pull if backend has keepCache === true property');
+        xit('should not create clean cache directory before push if backend has keepCache === true property');
         xit('should not call `gitWrapper.olderRevision` if installDiffOnly is false');
         xit('should call `npmWrapper.installAll` if no backend succeded');
         xit('should not call `npmWrapper.installAll` if fallbackToNpm set to false');
