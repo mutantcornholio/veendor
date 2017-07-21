@@ -85,7 +85,7 @@ describe('git-lfs', () => {
 
             const checkResult = expectCalls.bind(null, [{
                 spy: gitWrapper.checkout,
-                args: [sinon.match('.veendor/git-lfs.0/repo'), fakeHash]
+                args: [sinon.match('.veendor/git-lfs.0/repo'), 'veendor-' + fakeHash]
             }], done);
 
             gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0').then(checkResult, checkResult);
@@ -106,7 +106,7 @@ describe('git-lfs', () => {
                 .notify(done);
         });
 
-        it('unpacks the archive to $(pwd)/node_modules', done => {
+        it('unpacks the archive to $(pwd)', done => {
             mockfs({
                 '.veendor': {
                     'git-lfs.0': {}
@@ -115,10 +115,7 @@ describe('git-lfs', () => {
 
             const checkResult = expectCalls.bind(null, [{
                 spy: tarWrapper.extractArchive,
-                args: [
-                    sinon.match(`.veendor/git-lfs.0/repo/${fakeHash}.tar.gz`),
-                    path.resolve(process.cwd(), 'node_modules')
-                ]
+                args: [sinon.match(`.veendor/git-lfs.0/repo/${fakeHash}.tar.gz`)]
             }], done);
 
             gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0').then(checkResult, checkResult);
