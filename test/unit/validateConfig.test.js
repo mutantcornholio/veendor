@@ -32,7 +32,7 @@ describe('validateConfig', function () {
     xit('sets installOnlyDiff to true');
     xit('sets packageHash to {}');
     xit('should throw error if useGetHistory is set without depth option');
-    xit('should check whether backend has pull, push and validateOptions functions');
+    xit('should check whether backend has pull, push, alias and validateOptions functions');
     xit('should call backend\'s validateOptions function');
     xit('should throw error if npmTimeout is\'n positive/zero number');
     xit('should set default npm timeout to 0');

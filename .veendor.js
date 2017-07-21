@@ -3,9 +3,10 @@
 module.exports = {
     backends: [
         {
-            backend: {
-                pull: () => Promise.resolve(),
-                push: () => Promise.resolve(),
+            alias: 'github',
+            backend: require('/Users/cornholio/dev/veendor/lib/backends/git-lfs'),
+            options: {
+                repo: 'git://github.com/mutantcornholio/veendor-vendors'
             }
         }
     ]

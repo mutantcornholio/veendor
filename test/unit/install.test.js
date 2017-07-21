@@ -6,12 +6,14 @@ const mockfs = require('mock-fs');
 const fsz = require('mz/fs');
 const path = require('path');
 const _ = require('lodash');
+const tracer = require('tracer');
 
 const install = require('../../lib/install');
 const pkgJson = require('../../lib/pkgjson');
 const gitWrapper = require('../../lib/commandWrappers/gitWrapper');
 const npmWrapper = require('../../lib/commandWrappers/npmWrapper');
 const backendsErrors = require('../../lib/backends/errors');
+const logger = require('../../lib/logger');
 
 const assert = chai.assert;
 chai.use(chaiAsPromised);
@@ -33,7 +35,8 @@ describe('install', () => {
                     push: _ => Promise.resolve(),
                     validateOptions: _ => Promise.resolve()
                 },
-                options: {}
+                options: {},
+                alias: 'fakeBackends[0]'
             },
             {
                 backend: {
@@ -41,7 +44,8 @@ describe('install', () => {
                     push: _ => Promise.resolve(),
                     validateOptions: _ => Promise.resolve()
                 },
-                options: {}
+                options: {},
+                alias: 'fakeBackends[1]'
             },
         ];
 
@@ -57,6 +61,7 @@ describe('install', () => {
 
         fakeSha1 = '1234567890deadbeef1234567890';
 
+        logger.setLogger(tracer.console({level: 6}));
     });
 
     afterEach(() => {
@@ -66,7 +71,7 @@ describe('install', () => {
 
     it('should fail if node_modules already exist', done => {
         mockfs({
-            'node_modules': {},
+            'node_modules': {some: {stuff: 'inside'}},
             'package.json': JSON.stringify(PKGJSON)
         });
 
@@ -77,17 +82,18 @@ describe('install', () => {
 
     it('should delete node_modules, if force option is used', done => {
         mockfs({
-            'node_modules': {},
+            'node_modules': {some: {stuff: 'inside'}},
             'package.json': JSON.stringify(PKGJSON)
         });
 
         const nodeModules = path.join(process.cwd(), 'node_modules');
 
-        sandbox.spy(fsz, 'rmdir');
-
         install({force: true, config: {backends: fakeBackends}}).then(() => {
-            assert(fsz.rmdir.calledWith(nodeModules));
-            done();
+            fsz.stat(nodeModules).then(() => {
+                done(new Error('node_modules haven\'t been removed'));
+            }, () => {
+                done();
+            });
         }, done);
     });
 
@@ -455,6 +461,7 @@ describe('install', () => {
         xit('should call `push` on all backends with push: true option after npm install');
         xit('failing to push on backends without pushMayFail === true should reject install');
         xit('failing to push on backends with pushMayFail === true should be ignored');
+        xit('should resolve backend from string to module');
     });
 });
 
