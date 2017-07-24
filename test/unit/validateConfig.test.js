@@ -86,7 +86,12 @@ describe('validateConfig', function () {
         backend1Mock.verify();
     });
 
-    xit('sets fallbackToNpm to true');
+    it('sets fallbackToNpm to true', () => {
+        validateConfig(config);
+
+        assert(config.fallbackToNpm === true);
+    });
+
     xit('sets installOnlyDiff to true');
     xit('sets packageHash to {}');
     xit('should throw error if useGetHistory is set without depth option');

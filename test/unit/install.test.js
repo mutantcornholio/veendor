@@ -23,6 +23,7 @@ let PKGJSON;
 let fakeSha1;
 let sandbox;
 let fakeBackends;
+let config;
 
 describe('install', () => {
     beforeEach(() => {
@@ -35,6 +36,8 @@ describe('install', () => {
         fakeBackends = [helpers.fakeBackendConfig('fakeBackends[0]'), helpers.fakeBackendConfig('fakeBackends[1]')];
         fakeBackends[0].backend.pull = () => Promise.reject(new backendsErrors.BundleNotFoundError);
 
+        sandbox.stub(npmWrapper, 'installAll').resolves();
+
         PKGJSON = {
             dependencies: {
                 foo: '2.2.8',
@@ -43,6 +46,13 @@ describe('install', () => {
             devDependencies: {
                 baz: '6.6.6'
             }
+        };
+
+        config = {
+            backends: fakeBackends,
+            fallbackToNpm: true,
+            installOnlyDiff: true,
+            packageHash: {}
         };
 
         fakeSha1 = '1234567890deadbeef1234567890';
@@ -75,7 +85,7 @@ describe('install', () => {
 
         const nodeModules = path.join(process.cwd(), 'node_modules');
 
-        install({force: true, config: {backends: fakeBackends}}).then(() => {
+        install({force: true, config}).then(() => {
             fsz.stat(nodeModules).then(() => {
                 done(new Error('node_modules haven\'t been removed'));
             }, () => {
@@ -86,7 +96,7 @@ describe('install', () => {
 
     it('should fail if pkgJson is not supplied', done => {
         mockfs({});
-        const result = install({config: {}});
+        const result = install({config});
 
         assert.isRejected(result, install.PkgJsonNotFoundError).notify(done);
     });
@@ -96,7 +106,7 @@ describe('install', () => {
         const pkgJsonMock = sandbox.mock(pkgJson).expects('calcHash').withArgs(PKGJSON);
         const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
 
-        install({config: {backends: fakeBackends}}).then(checkResult, checkResult);
+        install({config}).then(checkResult, checkResult);
     });
 
     it('should call `pull` on all backends until any backend succedes', done => {
@@ -128,17 +138,7 @@ describe('install', () => {
 
         const checkResult = checkMockResult.bind(null, [fakeBackends0Mock, fakeBackends1Mock], done);
 
-        install({
-            config: {backends: fakeBackends}
-        }).then(checkResult, checkResult);
-    });
-
-    it('should reject with BundlesNotFoundError if no backend succeded with pull', done => {
-        const result = install({
-            config: {backends: [fakeBackends[0], fakeBackends[0]]}
-        });
-
-        assert.isRejected(result, install.BundlesNotFoundError).notify(done);
+        install({config}).then(checkResult, checkResult);
     });
 
     it('should create cache directory before pull', done => {
@@ -146,9 +146,7 @@ describe('install', () => {
             fsz.stat(path.resolve('.veendor', fakeBackends[0].alias)).then(() => done(), done);
         };
 
-        install({
-            config: {backends: fakeBackends}
-        }).then(checkResult, checkResult);
+        install({config}).then(checkResult, checkResult);
     });
 
     it('should pass cache directory to pull', done => {
@@ -163,9 +161,7 @@ describe('install', () => {
 
         const checkResult = checkMockResult.bind(null, [fakeBackends0Mock, fakeBackends1Mock], done);
 
-        install({
-            config: {backends: fakeBackends}
-        }).then(checkResult, checkResult);
+        install({config}).then(checkResult, checkResult);
     });
 
     it('should clean cache directory before pull', done => {
@@ -195,9 +191,7 @@ describe('install', () => {
             });
         };
 
-        install({
-            config: {backends: fakeBackends}
-        });
+        install({config});
     });
 
     it('should not clean cache directory before pull if backend has keepCache === true property', done => {
@@ -222,10 +216,34 @@ describe('install', () => {
             });
         };
 
-        install({
-            config: {backends: fakeBackends}
-        });
+        install({config});
     });
+
+    it('should call `npmWrapper.installAll` if no backend succeded', done => {
+        mockfs({
+            'package.json': JSON.stringify(PKGJSON)
+        });
+
+        npmWrapper.installAll.restore();
+        const npmWrapperMock = sandbox.mock(npmWrapper, 'installAll')
+            .expects('installAll');
+
+        const checkResults = checkMockResult.bind(null, [npmWrapperMock], done);
+
+        config.backends = [fakeBackends[0], fakeBackends[0]];
+
+        install({config}).then(checkResults, checkResults);
+    });
+
+    it('should not call `npmWrapper.installAll` if fallbackToNpm set to false', done => {
+        config.fallbackToNpm = false;
+        config.backends = [fakeBackends[0], fakeBackends[0]];
+
+        const result = install({config});
+
+        assert.isRejected(result, install.BundlesNotFoundError).notify(done);
+    });
+
 
     describe('_', () => {
         let fakePkgJson1;
@@ -294,14 +312,11 @@ describe('install', () => {
                 .withArgs(sinon.match(/package\.json$/), 3)
                 .resolves(JSON.stringify(fakePkgJson2));
 
-            const result = install({
-                config: {
-                    backends: [fakeBackends[0]],
-                    useGitHistory: {
-                        depth: 2
-                    }
-                }
-            });
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            const result = install({config});
 
             const checkResult = checkMockResult.bind(null, [gitWrapperMock], done);
 
@@ -317,14 +332,12 @@ describe('install', () => {
 
             const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
 
-            install({
-                config: {
-                    backends: [fakeBackends[0]],
-                    useGitHistory: {
-                        depth: 1
-                    }
-                }
-            }).then(checkResult, checkResult);
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 1
+            };
+
+            install({config}).then(checkResult, checkResult);
         });
 
         it('should call `pull` on backends with gitWrapper.olderRevision\'s hash', done => {
@@ -334,14 +347,12 @@ describe('install', () => {
 
             const checkResult = checkMockResult.bind(null, [backendMock], done);
 
-            install({
-                config: {
-                    backends: [fakeBackends[0]],
-                    useGitHistory: {
-                        depth: 1
-                    }
-                }
-            }).then(checkResult, checkResult);
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 1
+            };
+
+            install({config}).then(checkResult, checkResult);
         });
 
         it('should not call gitWrapper.olderRevision if useGitHistory.depth is not defined', done => {
@@ -352,11 +363,9 @@ describe('install', () => {
 
             const checkResult = checkMockResult.bind(null, [gitWrapperMock], done);
 
-            install({
-                config: {
-                    backends: [fakeBackends[0]]
-                }
-            }).then(checkResult, checkResult);
+            config.backends = [fakeBackends[0]];
+
+            install({config}).then(checkResult, checkResult);
         });
 
         it('should not call gitWrapper.olderRevision if not in git repo', done => {
@@ -618,8 +627,6 @@ describe('install', () => {
 
         xit('should pass npm timeout from config');
         xit('should not call `gitWrapper.olderRevision` if installDiffOnly is false');
-        xit('should call `npmWrapper.installAll` if no backend succeded');
-        xit('should not call `npmWrapper.installAll` if fallbackToNpm set to false');
         xit('should call `push` on all backends with push: true option after npm install');
         xit('failing to push on backends without pushMayFail === true should reject install');
         xit('failing to push on backends with pushMayFail === true should be ignored');
