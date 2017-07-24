@@ -26,8 +26,11 @@ let fakeBackends;
 
 describe('install', () => {
     beforeEach(() => {
-        mockfs();
         sandbox = sinon.sandbox.create();
+
+        mockfs({
+            'package.json': JSON.stringify(PKGJSON)
+        });
 
         fakeBackends = [helpers.fakeBackendConfig('fakeBackends[0]'), helpers.fakeBackendConfig('fakeBackends[1]')];
         fakeBackends[0].backend.pull = () => Promise.reject(new backendsErrors.BundleNotFoundError);
@@ -43,6 +46,7 @@ describe('install', () => {
         };
 
         fakeSha1 = '1234567890deadbeef1234567890';
+        sandbox.stub(pkgJson, 'calcHash').returns(fakeSha1);
 
         logger.setLogger(tracer.console({level: 6}));
     });
@@ -81,16 +85,14 @@ describe('install', () => {
     });
 
     it('should fail if pkgJson is not supplied', done => {
+        mockfs({});
         const result = install({config: {}});
 
-        assert.isRejected(result).notify(done);
+        assert.isRejected(result, install.PkgJsonNotFoundError).notify(done);
     });
 
     it('should call pkgjson with package.json contents first', done => {
-        mockfs({
-            'package.json': JSON.stringify(PKGJSON)
-        });
-
+        pkgJson.calcHash.restore();
         const pkgJsonMock = sandbox.mock(pkgJson).expects('calcHash').withArgs(PKGJSON);
         const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
 
@@ -98,12 +100,6 @@ describe('install', () => {
     });
 
     it('should call `pull` on all backends until any backend succedes', done => {
-        mockfs({
-            'package.json': JSON.stringify(PKGJSON)
-        });
-
-        sandbox.stub(pkgJson, 'calcHash').returns(fakeSha1);
-
         const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend)
             .expects('pull')
             .withArgs(fakeSha1)
@@ -121,12 +117,6 @@ describe('install', () => {
     });
 
     it('should pass options to `pull` on a backend', done => {
-        mockfs({
-            'package.json': JSON.stringify(PKGJSON)
-        });
-
-        sandbox.stub(pkgJson, 'calcHash').returns(fakeSha1);
-
         const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend)
             .expects('pull')
             .withArgs(sinon.match.any, sinon.match.same(fakeBackends[0].options))
@@ -144,12 +134,6 @@ describe('install', () => {
     });
 
     it('should reject with BundlesNotFoundError if no backend succeded with pull', done => {
-        mockfs({
-            'package.json': JSON.stringify(PKGJSON)
-        });
-
-        sandbox.stub(pkgJson, 'calcHash').returns(fakeSha1);
-
         const result = install({
             config: {backends: [fakeBackends[0], fakeBackends[0]]}
         });
@@ -158,10 +142,6 @@ describe('install', () => {
     });
 
     it('should create cache directory before pull', done => {
-        mockfs({
-            'package.json': JSON.stringify(PKGJSON)
-        });
-
         const checkResult = () => {
             fsz.stat(path.resolve('.veendor', fakeBackends[0].alias)).then(() => done(), done);
         };
@@ -171,15 +151,7 @@ describe('install', () => {
         }).then(checkResult, checkResult);
     });
 
-    xit('should create cache directory before push');
-
     it('should pass cache directory to pull', done => {
-        mockfs({
-            'package.json': JSON.stringify(PKGJSON)
-        });
-
-        sandbox.stub(pkgJson, 'calcHash').returns(fakeSha1);
-
         const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend)
             .expects('pull')
             .withArgs(sinon.match.any, sinon.match.any, sinon.match(`.veendor/${fakeBackends[0].alias}`))
@@ -196,12 +168,42 @@ describe('install', () => {
         }).then(checkResult, checkResult);
     });
 
-    xit('should create clean cache directory before pull');
-    xit('should create clean cache directory before push');
+    it('should clean cache directory before pull', done => {
+        const mockfsConfig = {
+            '.veendor': {},
+            'package.json': JSON.stringify(PKGJSON)
+        };
 
+        mockfsConfig['.veendor'][fakeBackends[0].alias] = {'shouldBe': 'deleted'};
+        mockfs(mockfsConfig);
 
-    xit('should not create clean cache directory before pull if backend has keepCache === true property');
-    xit('should not create clean cache directory before push if backend has keepCache === true property');
+        fakeBackends[0].backend.pull = (hash, options, cacheDir) => {
+            return new Promise((resolve, reject) => {
+                fsz.stat(path.resolve('.veendor', fakeBackends[0].alias, 'shouldBe')).then(
+                    () => {done(new Error(`'.veendor/${fakeBackends[0].alias}/shouldBe' should be deleted`))},
+                    (err) => {
+                        if (err.code === 'ENOENT') {
+                            done();
+                        } else {
+                            done(err);
+                        }
+
+                    }
+                );
+
+                return reject(new backendsErrors.BundleNotFoundError);
+            });
+
+        };
+
+        install({
+            config: {backends: fakeBackends}
+        });
+    });
+    xit('should clean cache directory before push');
+
+    xit('should not clean cache directory before pull if backend has keepCache === true property');
+    xit('should not clean cache directory before push if backend has keepCache === true property');
 
     describe('_', () => {
         let fakePkgJson1;
@@ -215,13 +217,13 @@ describe('install', () => {
             mockfs({
                 'package.json': JSON.stringify(PKGJSON)
             });
-
             fakePkgJson1 = _.cloneDeep(PKGJSON);
             fakePkgJson1.dependencies.c = '1.0.0';
 
             fakePkgJson2 = _.cloneDeep(PKGJSON);
             fakePkgJson2.dependencies.c = '2.1.8';
 
+            pkgJson.calcHash.restore();
             pkgJsonStub = sandbox.stub(pkgJson, 'calcHash').callsFake(_pkgJson => {
                 if (_.isEqual(_pkgJson, fakePkgJson1)) {
                     return 'fakePkgJson1Hash';
@@ -245,6 +247,17 @@ describe('install', () => {
             gitWrapperIsGitRepoStub = sandbox.stub(gitWrapper, 'isGitRepo').callsFake(() => Promise.resolve());
 
             npmWrapperStub = sandbox.stub(npmWrapper, 'install').callsFake(() => Promise.resolve());
+
+            fakeBackends[0].push = true;
+            fakeBackends[1].backend.pull = (hash) => {
+                if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
+                    return Promise.reject(new backendsErrors.BundleNotFoundError);
+                } else if (hash === 'fakePkgJson2Hash') {
+                    return Promise.resolve();
+                } else {
+                    throw new Error('Something is unmocked');
+                }
+            };
         });
 
         it('should look in useGitHistory.depth entries', (done) => {
@@ -407,18 +420,6 @@ describe('install', () => {
         });
 
         it('should call `push` on all backends with push: true option after partial npm install', done => {
-            fakeBackends[0].push = true;
-
-            fakeBackends[1].backend.pull = (hash) => {
-                if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
-                    return Promise.reject(new backendsErrors.BundleNotFoundError);
-                } else if (hash === 'fakePkgJson2Hash') {
-                    return Promise.resolve();
-                } else {
-                    throw new Error('Something is unmocked');
-                }
-            };
-
             const backendMock0 = sandbox.mock(fakeBackends[0].backend);
             const backendMock1 = sandbox.mock(fakeBackends[1].backend);
 
@@ -438,17 +439,6 @@ describe('install', () => {
         });
 
         it('should pass options to `push`', done => {
-            fakeBackends[0].push = true;
-            fakeBackends[1].backend.pull = (hash) => {
-                if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
-                    return Promise.reject(new backendsErrors.BundleNotFoundError);
-                } else if (hash === 'fakePkgJson2Hash') {
-                    return Promise.resolve();
-                } else {
-                    throw new Error('Something is unmocked');
-                }
-            };
-
             const backendMock0 = sandbox.mock(fakeBackends[0].backend);
 
             backendMock0
@@ -468,7 +458,58 @@ describe('install', () => {
             }).then(checkResult, checkResult);
         });
 
-        xit('should pass cache directory to push');
+        it('should create cache directory before push', done => {
+            mockfs({
+                'package.json': JSON.stringify(PKGJSON)
+            });
+
+            const checkResult = () => {
+                fsz.stat(path.resolve('.veendor', fakeBackends[0].alias)).then(() => done(), done);
+            };
+
+            const old1Pull = fakeBackends[1].backend.pull;
+            fakeBackends[1].backend.pull = (hash) => {
+                mockfs.restore();
+                mockfs({
+                    'package.json': JSON.stringify(PKGJSON)
+                });
+
+                return old1Pull(hash);
+            };
+
+            install({
+                config: {
+                    backends: fakeBackends,
+                    useGitHistory: {
+                        depth: 2
+                    }
+                }
+            }).then(checkResult, checkResult);
+        });
+
+        it('should pass cache directory to push', done => {
+            mockfs({
+                'package.json': JSON.stringify(PKGJSON)
+            });
+
+            const backendMock0 = sandbox.mock(fakeBackends[0].backend);
+
+            backendMock0
+                .expects('push')
+                .withArgs(sinon.match.any, sinon.match.any, path.resolve('.veendor', fakeBackends[0].alias))
+                .resolves();
+
+            const checkResult = checkMockResult.bind(null, [backendMock0], done);
+
+            install({
+                config: {
+                    backends: fakeBackends,
+                    useGitHistory: {
+                        depth: 2
+                    }
+                }
+            }).then(checkResult, checkResult);
+        });
 
         xit('should pass npm timeout from config');
         xit('should not call `gitWrapper.olderRevision` if installDiffOnly is false');

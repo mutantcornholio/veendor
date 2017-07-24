@@ -21,7 +21,9 @@ const config = resolveConfig(program.config);
 const daLogger = logger.setDefaultLogger(1, 3);
 
 install({force: program.force, config})
-    .catch(e => {
+    .then(() => {
+        // TODO: removing log file
+    }, e => {
         if (e instanceof install.NodeModulesAlreadyExistError) {
             return daLogger.error('\'node_modules\' directory already exists. Use -f option to remove it');
         }
