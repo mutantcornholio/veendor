@@ -62,6 +62,7 @@ describe('git-lfs', () => {
             gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0').then(checkResult, checkResult);
         });
 
+        // FIXME: use isGitRepo here
         it('runs `fetch` if repo already exist', done => {
             mockfs({
                 '.veendor': {
@@ -154,7 +155,7 @@ describe('git-lfs', () => {
             const checkResult = expectCalls.bind(null, [{
                 spy: tarWrapper.createArchive,
                 args: [
-                    sinon.match(`.veendor/git-lfs.0/repo/${fakeHash}.tar.gz`),
+                    sinon.match(`.veendor/git-lfs.0/repo/${fakeHash}`),
                     [path.resolve(process.cwd(), 'node_modules')],
                     defaultOptions.compression
                 ]
@@ -168,7 +169,7 @@ describe('git-lfs', () => {
                 spy: gitWrapper.add,
                 args: [
                     sinon.match('.veendor/git-lfs.0/repo'),
-                    sinon.match(`.veendor/git-lfs.0/repo/${fakeHash}.tar.gz`)
+                    [sinon.match(`.veendor/git-lfs.0/repo/${fakeHash}.tar.gz`)]
                 ]
             }], done);
 

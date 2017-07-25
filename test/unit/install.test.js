@@ -15,6 +15,7 @@ const npmWrapper = require('../../lib/commandWrappers/npmWrapper');
 const backendsErrors = require('../../lib/backends/errors');
 const logger = require('../../lib/logger');
 const helpers = require('./helpers');
+const fs = require("fs");
 
 const assert = chai.assert;
 chai.use(chaiAsPromised);
@@ -124,6 +125,21 @@ describe('install', () => {
         install({
             config: {backends: fakeBackends}
         }).then(checkResult, checkResult);
+    });
+
+    it('should not call `push` if `pull` succedes', done => {
+        mockfs({
+            'package.json': JSON.stringify(PKGJSON)
+        });
+
+        const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend)
+            .expects('push')
+            .never();
+
+        fakeBackends[0].push = true;
+        const checkResult = checkMockResult.bind(null, [fakeBackends0Mock], done);
+
+        install({config}).then(checkResult, checkResult);
     });
 
     it('should pass options to `pull` on a backend', done => {
@@ -378,14 +394,12 @@ describe('install', () => {
 
             const checkResult = checkMockResult.bind(null, [gitWrapperMock], done);
 
-            install({
-                config: {
-                    backends: [fakeBackends[0]],
-                    useGitHistory: {
-                        depth: 1
-                    }
-                }
-            }).then(checkResult, checkResult);
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 1
+            };
+
+            install({config}).then(checkResult, checkResult);
         });
 
         it('should call `npmWrapper.install` with diff between package.json\'s ' +
@@ -407,14 +421,12 @@ describe('install', () => {
 
             const checkResult = checkMockResult.bind(null, [npmWrapperMock], done);
 
-            install({
-                config: {
-                    backends: [fakeBackends[0]],
-                    useGitHistory: {
-                        depth: 2
-                    }
-                }
-            }).then(checkResult, checkResult);
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            install({config}).then(checkResult, checkResult);
         });
 
         it('should call `npmWrapper.uninstall` for deleted modules', done => {
@@ -440,14 +452,12 @@ describe('install', () => {
 
             const checkResult = checkMockResult.bind(null, [npmWrapperMock], done);
 
-            install({
-                config: {
-                    backends: [fakeBackends[0]],
-                    useGitHistory: {
-                        depth: 2
-                    }
-                }
-            }).then(checkResult, checkResult);
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            install({config}).then(checkResult, checkResult);
         });
 
         it('should call `push` on all backends with push: true option after partial npm install', done => {
@@ -459,14 +469,11 @@ describe('install', () => {
 
             const checkResult = checkMockResult.bind(null, [backendMock0, backendMock1], done);
 
-            install({
-                config: {
-                    backends: fakeBackends,
-                    useGitHistory: {
-                        depth: 2
-                    }
-                }
-            }).then(checkResult, checkResult);
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            install({config}).then(checkResult, checkResult);
         });
 
         it('should pass options to `push`', done => {
@@ -479,14 +486,11 @@ describe('install', () => {
 
             const checkResult = checkMockResult.bind(null, [backendMock0], done);
 
-            install({
-                config: {
-                    backends: fakeBackends,
-                    useGitHistory: {
-                        depth: 2
-                    }
-                }
-            }).then(checkResult, checkResult);
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            install({config}).then(checkResult, checkResult);
         });
 
         it('should create cache directory before push', done => {
@@ -508,14 +512,11 @@ describe('install', () => {
                 return old1Pull(hash);
             };
 
-            install({
-                config: {
-                    backends: fakeBackends,
-                    useGitHistory: {
-                        depth: 2
-                    }
-                }
-            }).then(checkResult, checkResult);
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            install({config}).then(checkResult, checkResult);
         });
 
         it('should pass cache directory to push', done => {
@@ -532,14 +533,11 @@ describe('install', () => {
 
             const checkResult = checkMockResult.bind(null, [backendMock0], done);
 
-            install({
-                config: {
-                    backends: fakeBackends,
-                    useGitHistory: {
-                        depth: 2
-                    }
-                }
-            }).then(checkResult, checkResult);
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            install({config}).then(checkResult, checkResult);
         });
 
         it('should clean cache directory before push', done => {
@@ -576,14 +574,11 @@ describe('install', () => {
                 });
             };
 
-            install({
-                config: {
-                    backends: fakeBackends,
-                    useGitHistory: {
-                        depth: 2
-                    }
-                }
-            });
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            install({config});
         });
 
         it('should not clean cache directory before push if backend has keepCache === true property', done => {
@@ -615,26 +610,39 @@ describe('install', () => {
                 });
             };
 
-            install({
-                config: {
-                    backends: fakeBackends,
-                    useGitHistory: {
-                        depth: 2
-                    }
-                }
-            });
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            install({config});
+        });
+
+        it('should call `push` on all backends with push: true option after npm install', done => {
+            fakeBackends[1].backend.pull = () => Promise.reject(new backendsErrors.BundleNotFoundError);
+            const backendMock0 = sandbox.mock(fakeBackends[0].backend);
+            const backendMock1 = sandbox.mock(fakeBackends[1].backend);
+
+            backendMock0.expects('push').withArgs('PKGJSONHash').resolves();
+            backendMock1.expects('push').never();
+
+            const checkResult = checkMockResult.bind(null, [backendMock0, backendMock1], done);
+
+            install({config}).then(checkResult, checkResult);
         });
 
         xit('should pass npm timeout from config');
         xit('should not call `gitWrapper.olderRevision` if installDiffOnly is false');
-        xit('should call `push` on all backends with push: true option after npm install');
         xit('failing to push on backends without pushMayFail === true should reject install');
         xit('failing to push on backends with pushMayFail === true should be ignored');
         xit('should resolve backend from string to module');
     });
 });
 
-function checkMockResult(mocks, done) {
+function checkMockResult(mocks, done, error) {
+    if (error && error.name === 'ExpectationError') {
+        return done(error);
+    }
+
     try {
         mocks.map(mock => mock.verify());
     } catch (error) {
