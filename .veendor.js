@@ -10,5 +10,8 @@ module.exports = {
                 repo: 'git@github.com:mutantcornholio/veendor-vendors.git'
             }
         }
-    ]
+    ],
+    useGitHistory: {
+        depth: 5
+    }
 };

@@ -5,6 +5,7 @@ const fs = require('fs');
 
 const install = require('../lib/install');
 const resolveConfig = require('../lib/resolveConfig');
+const gitWrapper = require('../lib/commandWrappers/gitWrapper');
 const logger = require('../lib/logger');
 
 process.on('uncaughtException', console.error);
@@ -26,7 +27,10 @@ install({force: program.force, config})
     }, e => {
         if (e instanceof install.NodeModulesAlreadyExistError) {
             return daLogger.error('\'node_modules\' directory already exists. Use -f option to remove it');
+        } else if (e instanceof gitWrapper.NotAGitRepoError && config.useGitHistory) {
+            return daLogger.error(`'useGitHistory' set in config, but ${process.cwd()} is not a git repo`);
         }
+
         daLogger.error(e); process.exit(1)
     });
 

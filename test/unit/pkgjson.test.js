@@ -67,5 +67,6 @@ describe('pkgjson', function () {
 
         xit('should add string suffixes');
         xit('should add function suffixes');
+        xit('should resolve backend from string to module');
     });
 });

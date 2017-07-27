@@ -292,13 +292,16 @@ describe('install', () => {
                 throw new Error('Something is unmocked');
             });
 
-            gitWrapperOlderRevisionStub = sandbox.stub(gitWrapper, 'olderRevision').callsFake((filename, age) => {
-                if (age === 2) {
-                    return Promise.resolve(JSON.stringify(fakePkgJson1));
-                } else if (age === 3) {
-                    return Promise.resolve(JSON.stringify(fakePkgJson2));
-                }
-            });
+            gitWrapperOlderRevisionStub = sandbox.stub(gitWrapper, 'olderRevision')
+                .callsFake((gitDir, filename, age) => {
+                    if (age === 1) {
+                        return Promise.resolve(JSON.stringify(PKGJSON));
+                    }else if (age === 2) {
+                        return Promise.resolve(JSON.stringify(fakePkgJson1));
+                    } else if (age === 3) {
+                        return Promise.resolve(JSON.stringify(fakePkgJson2));
+                    }
+                });
 
             gitWrapperIsGitRepoStub = sandbox.stub(gitWrapper, 'isGitRepo').callsFake(() => Promise.resolve());
 
@@ -316,16 +319,20 @@ describe('install', () => {
             };
         });
 
-        it('should look in useGitHistory.depth entries', (done) => {
+        it('should look in useGitHistory.depth entries, starting at HEAD', (done) => {
             gitWrapperOlderRevisionStub.restore();
             const gitWrapperMock = sandbox.mock(gitWrapper);
 
             gitWrapperMock.expects('olderRevision')
-                .withArgs(sinon.match(/package\.json$/), 2)
+                .withArgs(process.cwd(), sinon.match('package.json'), 1)
                 .resolves(JSON.stringify(fakePkgJson1));
 
             gitWrapperMock.expects('olderRevision')
-                .withArgs(sinon.match(/package\.json$/), 3)
+                .withArgs(process.cwd(), sinon.match('package.json'), 2)
+                .resolves(JSON.stringify(fakePkgJson1));
+
+            gitWrapperMock.expects('olderRevision')
+                .withArgs(process.cwd(), sinon.match('package.json'), 3)
                 .resolves(JSON.stringify(fakePkgJson2));
 
             config.useGitHistory = {
@@ -344,6 +351,7 @@ describe('install', () => {
             const pkgJsonMock = sandbox.mock(pkgJson);
 
             pkgJsonMock.expects('calcHash').withArgs(PKGJSON).returns('PKGJSONHash');
+            pkgJsonMock.expects('calcHash').withArgs(PKGJSON).returns('PKGJSONHash');
             pkgJsonMock.expects('calcHash').withArgs(fakePkgJson1).returns('fakePkgJson1Hash');
 
             const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
@@ -357,18 +365,35 @@ describe('install', () => {
         });
 
         it('should call `pull` on backends with gitWrapper.olderRevision\'s hash', done => {
-            const backendMock = sandbox.mock(fakeBackends[0].backend);
-            backendMock.expects('pull').withArgs('PKGJSONHash').rejects(new backendsErrors.BundleNotFoundError);
-            backendMock.expects('pull').withArgs('fakePkgJson1Hash').resolves();
+            const backend0Mock = sandbox.mock(fakeBackends[0].backend);
+            backend0Mock.expects('pull').withArgs('PKGJSONHash').rejects(new backendsErrors.BundleNotFoundError);
+            backend0Mock.expects('pull').withArgs('PKGJSONHash').rejects(new backendsErrors.BundleNotFoundError);
+            backend0Mock.expects('pull').withArgs('fakePkgJson1Hash').resolves();
 
-            const checkResult = checkMockResult.bind(null, [backendMock], done);
+            const backend1Mock = sandbox.mock(fakeBackends[1].backend);
+            backend1Mock.expects('pull').withArgs('PKGJSONHash').rejects(new backendsErrors.BundleNotFoundError);
+            backend1Mock.expects('pull').withArgs('PKGJSONHash').rejects(new backendsErrors.BundleNotFoundError);
+            backend1Mock.expects('pull').withArgs('fakePkgJson1Hash').never();
 
-            config.backends = [fakeBackends[0]];
+            const checkResult = checkMockResult.bind(null, [backend0Mock, backend1Mock], done);
+
+            config.backends = fakeBackends;
             config.useGitHistory = {
                 depth: 1
             };
 
             install({config}).then(checkResult, checkResult);
+        });
+
+        it('should reject if olderBundles not found', done => {
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 1
+            };
+
+            config.fallbackToNpm = false;
+
+            assert.isRejected(install({config}), install.BundlesNotFoundError).notify(done);
         });
 
         it('should not call gitWrapper.olderRevision if useGitHistory.depth is not defined', done => {
@@ -634,7 +659,9 @@ describe('install', () => {
         xit('should not call `gitWrapper.olderRevision` if installDiffOnly is false');
         xit('failing to push on backends without pushMayFail === true should reject install');
         xit('failing to push on backends with pushMayFail === true should be ignored');
-        xit('should resolve backend from string to module');
+        xit('should increase history.depth if hash hasn\'t changed (changes in package.json were unrelated to deps)');
+        xit('should not pull backends if hash hasn\'t changed (changes in package.json were unrelated to deps)');
+        xit('should push bundle to backends, which don\'t have it, if got it brom another backend');
     });
 });
 
