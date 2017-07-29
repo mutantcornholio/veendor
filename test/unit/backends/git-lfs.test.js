@@ -36,6 +36,8 @@ describe('git-lfs', () => {
             defaultBranch: 'defaultBranchaster'
         };
 
+        gitLfs._remoteIsFresh = false;
+
         sandbox.stub(gitWrapper, 'clone').resolves();
         sandbox.stub(gitWrapper, 'fetch').resolves();
         sandbox.stub(gitWrapper, 'checkout').resolves();
@@ -43,6 +45,7 @@ describe('git-lfs', () => {
         sandbox.stub(gitWrapper, 'commit').resolves();
         sandbox.stub(gitWrapper, 'tag').resolves();
         sandbox.stub(gitWrapper, 'push').resolves();
+        sandbox.stub(gitWrapper, 'isGitRepo').resolves();
         sandbox.stub(tarWrapper, 'createArchive').resolves();
         sandbox.stub(tarWrapper, 'extractArchive').resolves();
     });
@@ -54,6 +57,9 @@ describe('git-lfs', () => {
 
     describe('.pull', () => {
         it('clones repo to cache directory if isn\'t already there', done => {
+            gitWrapper.isGitRepo.restore();
+            sandbox.stub(gitWrapper, 'isGitRepo').rejects(gitWrapper.NotAGitRepoError);
+
             const checkResult = expectCalls.bind(null, [{
                 spy: gitWrapper.clone,
                 args: [fakeRepo, sinon.match('.veendor/git-lfs.0/repo')]
@@ -62,18 +68,7 @@ describe('git-lfs', () => {
             gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0').then(checkResult, checkResult);
         });
 
-        // FIXME: use isGitRepo here
         it('runs `fetch` if repo already exist', done => {
-            mockfs({
-                '.veendor': {
-                    'git-lfs.0': {
-                        repo: {
-                            '.git': {}
-                        }
-                    }
-                },
-            });
-
             const checkResult = expectCalls.bind(null, [{
                 spy: gitWrapper.fetch,
                 args: [sinon.match('.veendor/git-lfs.0/repo')]
@@ -110,6 +105,31 @@ describe('git-lfs', () => {
         });
 
         xit('if clone fails, should reject with BackendError');
+
+        it('should run git fetch only once in a run', done => {
+            const checkResult = () => {
+                try {
+                    const calls = gitWrapper.fetch.getCalls();
+                    assert.equal(
+                        calls.length,
+                        1,
+                        `Expected 'gitWrapper.fetch' to be called once`
+                    );
+                    done();
+                } catch (e) {
+                    done(e);
+                }
+            };
+
+            gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0')
+                .then(() => {
+                    return gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0');
+                })
+                .then(() => {
+                    return gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0');
+                })
+                .then(checkResult, checkResult);
+        });
     });
 
     describe('.push', () => {

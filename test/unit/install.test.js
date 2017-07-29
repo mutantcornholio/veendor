@@ -219,7 +219,7 @@ describe('install', () => {
         mockfsConfig['.veendor'][fakeBackends[0].alias] = {'shouldStay': 'true'};
         mockfs(mockfsConfig);
 
-        fakeBackends[0].keepCache = true;
+        fakeBackends[0].backend.keepCache = true;
 
         fakeBackends[0].backend.pull = () => {
             return new Promise((resolve, reject) => {
@@ -611,7 +611,7 @@ describe('install', () => {
                 'package.json': JSON.stringify(PKGJSON)
             });
 
-            fakeBackends[0].keepCache = true;
+            fakeBackends[0].backend.keepCache = true;
             fakeBackends[0].backend.pull = () => {
                 const mockfsConfig = {
                     '.veendor': {},
