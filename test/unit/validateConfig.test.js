@@ -96,6 +96,12 @@ describe('validateConfig', function () {
     xit('sets packageHash to {}');
     xit('should throw error if useGetHistory is set without depth option');
 
-    xit('should throw error if npmTimeout is\'n positive/zero number');
-    xit('should set default npm timeout to 0');
+    it('should resolve backend from string to module', () => {
+        config.backends[0].backend = 'local';
+        config.backends[0].options = {directory: '.'};
+
+        validateConfig(config);
+
+        assert.equal(config.backends[0].backend, require('../../lib/backends/local'));
+    });
 });

@@ -11,7 +11,7 @@ chai.use(chaiAsPromised);
 const gitLfs = require('../../../lib/backends/git-lfs');
 const gitWrapper = require('../../../lib/commandWrappers/gitWrapper');
 const tarWrapper = require('../../../lib/commandWrappers/tarWrapper');
-const errors = require('../../../lib/backends/errors');
+const errors = require('../../../lib/errors');
 
 let fakeRepo;
 let sandbox;

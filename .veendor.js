@@ -7,7 +7,7 @@ module.exports = {
         {
             alias: 'local',
             push: true,
-            backend: require('/Users/cornholio/dev/veendor/lib/backends/local'),
+            backend: 'local',
             options: {
                 directory: path.resolve(process.env.HOME, '.veendor-local')
             }
@@ -15,7 +15,7 @@ module.exports = {
         {
             alias: 'github',
             push: true,
-            backend: require('/Users/cornholio/dev/veendor/lib/backends/git-lfs'),
+            backend: 'git-lfs',
             options: {
                 repo: 'git@github.com:mutantcornholio/veendor-vendors.git'
             }
