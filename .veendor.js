@@ -1,7 +1,17 @@
 'use strict';
 
+const path = require('path');
+
 module.exports = {
     backends: [
+        {
+            alias: 'local',
+            push: true,
+            backend: require('/Users/cornholio/dev/veendor/lib/backends/local'),
+            options: {
+                directory: path.resolve(process.env.HOME, '.veendor-local')
+            }
+        },
         {
             alias: 'github',
             push: true,

@@ -97,7 +97,18 @@ describe('local', () => {
     });
 
     describe('push', () => {
-        xit('should pack node_modules to target directory');
+        it('should pack node_modules to target directory', done => {
+            const checkResult = expectCalls.bind(null, [{
+                spy: tarWrapper.createArchive,
+                args: [
+                    sinon.match(`target/${fakeHash}.tar.gz`),
+                    [sinon.match('node_modules')],
+                    defaultOptions.compression
+                ]
+            }], done);
+
+            local.push(fakeHash, defaultOptions, '.veendor/local').then(checkResult, checkResult);
+        });
     });
 
     describe('validateOptions', () => {
