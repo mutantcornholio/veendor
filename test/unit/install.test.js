@@ -141,12 +141,14 @@ describe('install', () => {
             'package.json': JSON.stringify(PKGJSON)
         });
 
-        const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend)
+        const fakeBackends1Mock = sandbox.mock(fakeBackends[1].backend)
             .expects('push')
             .never();
 
-        fakeBackends[0].push = true;
-        const checkResult = checkMockResult.bind(null, [fakeBackends0Mock], done);
+        config.backends = [fakeBackends[1]];
+
+        fakeBackends[1].push = true;
+        const checkResult = checkMockResult.bind(null, [fakeBackends1Mock], done);
 
         install({config}).then(checkResult, checkResult);
     });
@@ -701,12 +703,24 @@ describe('install', () => {
             install({config}).then(checkResult, checkResult);
         });
 
+        it('should push bundle to backends, which don\'t have it, if got it from another backend', done => {
+            const backendMock0 = sandbox.mock(fakeBackends[0].backend);
+            const backendMock1 = sandbox.mock(fakeBackends[1].backend);
+
+            backendMock0.expects('push').withArgs('PKGJSONHash').resolves();
+            backendMock1.expects('push').never();
+            backendMock1.expects('pull').resolves();
+
+            const checkResult = checkMockResult.bind(null, [backendMock0, backendMock1], done);
+
+            install({config}).then(checkResult, checkResult);
+        });
+
         xit('should not call `gitWrapper.olderRevision` if installDiffOnly is false');
         xit('failing to push on backends without pushMayFail === true should reject install');
         xit('failing to push on backends with pushMayFail === true should be ignored');
         xit('should increase history.depth if hash hasn\'t changed (changes in package.json were unrelated to deps)');
         xit('should not pull backends if hash hasn\'t changed (changes in package.json were unrelated to deps)');
-        xit('should push bundle to backends, which don\'t have it, if got it from another backend');
     });
 });
 
