@@ -23,5 +23,8 @@ module.exports = {
     ],
     useGitHistory: {
         depth: 5
+    },
+    packageHash: {
+        suffix: process.platform
     }
 };

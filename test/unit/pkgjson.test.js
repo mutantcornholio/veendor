@@ -1,3 +1,5 @@
+const {describe, it, beforeEach, afterEach} = require('mocha');
+
 const pkgjson = require('../../lib/pkgjson');
 const assert = require('chai').assert;
 const moquire = require('mock-require');
@@ -31,13 +33,13 @@ describe('pkgjson', function () {
             }
         };
 
-        before(function () {
+        beforeEach(function () {
             sinon.stub(crypto, 'createHash').callsFake(function () {
                 return fakeSha1;
             });
         });
 
-        after(function () {
+        afterEach(function () {
             crypto.createHash.restore();
         });
 
@@ -65,7 +67,16 @@ describe('pkgjson', function () {
             assert.equal(result, FAKE_HASH);
         });
 
-        xit('should add string suffixes');
-        xit('should add function suffixes');
+        it('should add string suffixes', () => {
+            const result = pkgjson.calcHash(PKGJSON_CONTENTS, {suffix: 'test'});
+
+            assert.equal(result, FAKE_HASH + '-test');
+        });
+
+        it('should add function suffixes', () => {
+            const result = pkgjson.calcHash(PKGJSON_CONTENTS, {suffix: () => 'test'});
+
+            assert.equal(result, FAKE_HASH + '-test');
+        });
     });
 });

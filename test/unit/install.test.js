@@ -110,6 +110,15 @@ describe('install', () => {
         install({config}).then(checkResult, checkResult);
     });
 
+    it('should pass config.packageHash to pkgjson', done => {
+        config.packageHash = {suffix: 'test'};
+        pkgJson.calcHash.restore();
+        const pkgJsonMock = sandbox.mock(pkgJson).expects('calcHash').withArgs(PKGJSON, config.packageHash);
+        const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
+
+        install({config}).then(checkResult, checkResult);
+    });
+
     it('should call `pull` on all backends until any backend succedes', done => {
         const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend)
             .expects('pull')
@@ -642,6 +651,26 @@ describe('install', () => {
             install({config});
         });
 
+        it('should call installAll if can not find old bundles', done => {
+            mockfs({
+                'package.json': JSON.stringify(PKGJSON)
+            });
+
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            npmWrapper.installAll.restore();
+            const npmWrapperMock = sandbox.mock(npmWrapper)
+                .expects('installAll');
+
+            const checkResults = checkMockResult.bind(null, [npmWrapperMock], done);
+
+            config.backends = [fakeBackends[0], fakeBackends[0]];
+
+            install({config}).then(checkResults, checkResults);
+        });
+
         it('should call `push` on all backends with push: true option after npm install', done => {
             fakeBackends[1].backend.pull = () => Promise.reject(new backendsErrors.BundleNotFoundError);
             const backendMock0 = sandbox.mock(fakeBackends[0].backend);
@@ -655,13 +684,29 @@ describe('install', () => {
             install({config}).then(checkResult, checkResult);
         });
 
-        xit('should pass npm timeout from config');
+        it('should call `push` on all backends with push: true option after npm install (with history)', done => {
+            fakeBackends[1].backend.pull = () => Promise.reject(new backendsErrors.BundleNotFoundError);
+            const backendMock0 = sandbox.mock(fakeBackends[0].backend);
+            const backendMock1 = sandbox.mock(fakeBackends[1].backend);
+
+            backendMock0.expects('push').withArgs('PKGJSONHash').resolves();
+            backendMock1.expects('push').never();
+
+            const checkResult = checkMockResult.bind(null, [backendMock0, backendMock1], done);
+
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            install({config}).then(checkResult, checkResult);
+        });
+
         xit('should not call `gitWrapper.olderRevision` if installDiffOnly is false');
         xit('failing to push on backends without pushMayFail === true should reject install');
         xit('failing to push on backends with pushMayFail === true should be ignored');
         xit('should increase history.depth if hash hasn\'t changed (changes in package.json were unrelated to deps)');
         xit('should not pull backends if hash hasn\'t changed (changes in package.json were unrelated to deps)');
-        xit('should push bundle to backends, which don\'t have it, if got it brom another backend');
+        xit('should push bundle to backends, which don\'t have it, if got it from another backend');
     });
 });
 

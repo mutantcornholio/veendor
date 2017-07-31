@@ -93,7 +93,13 @@ describe('validateConfig', function () {
     });
 
     xit('sets installOnlyDiff to true');
-    xit('sets packageHash to {}');
+
+    it('sets packageHash to {}', () => {
+        validateConfig(config);
+
+        assert.isObject(config.packageHash);
+    });
+
     xit('should throw error if useGetHistory is set without depth option');
 
     it('should resolve backend from string to module', () => {

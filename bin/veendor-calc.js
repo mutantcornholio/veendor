@@ -17,7 +17,7 @@ const pkgJsonString = fs.readFileSync(path.resolve(process.cwd(), 'package.json'
 pkgJson
     .parsePkgJson(pkgJsonString)
     .then(parsedPkgJson => {
-        console.log(pkgJson.calcHash(parsedPkgJson));
+        console.log(pkgJson.calcHash(parsedPkgJson, config.packageHash));
     }, error => {
         throw error;
     });
