@@ -716,11 +716,68 @@ describe('install', () => {
             install({config}).then(checkResult, checkResult);
         });
 
+        it('should increase history.depth if hash hasn\'t changed ' +
+            '(changes in package.json were unrelated to deps)', done => {
+
+            pkgJson.calcHash.restore();
+            let hashCount = 0;
+
+            gitWrapper.olderRevision.restore();
+            gitWrapperOlderRevisionStub = sandbox.stub(gitWrapper, 'olderRevision')
+                .resolves(JSON.stringify(fakePkgJson1));
+
+            const pkgJsonMock = sandbox.mock(pkgJson);
+
+            pkgJsonMock.expects('calcHash').exactly(5).callsFake(() => {
+                if (hashCount < 4) {
+                    hashCount++;
+                    return 'fakePkgJson1Hash';
+                }
+
+                return 'fakePkgJson2Hash';
+            });
+
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 1
+            };
+
+            const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
+
+            install({config}).then(checkResult, checkResult);
+        });
+
+        it('should not pull backends if hash hasn\'t changed ' +
+            '(changes in package.json were unrelated to deps)', done => {
+            pkgJson.calcHash.restore();
+            let hashCount = 0;
+
+            pkgJson.calcHash = () => {
+                if (hashCount < 4) {
+                    hashCount++;
+                    return 'fakePkgJson1Hash';
+                }
+
+                return 'fakePkgJson2Hash';
+            };
+
+            const backendMock0 = sandbox.mock(fakeBackends[0].backend);
+
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 1
+            };
+
+            backendMock0.expects('pull').withArgs('fakePkgJson1Hash').once().resolves();
+
+            const checkResult = checkMockResult.bind(null, [backendMock0], done);
+
+            install({config}).then(checkResult, checkResult);
+        });
+
         xit('should not call `gitWrapper.olderRevision` if installDiffOnly is false');
         xit('failing to push on backends without pushMayFail === true should reject install');
         xit('failing to push on backends with pushMayFail === true should be ignored');
-        xit('should increase history.depth if hash hasn\'t changed (changes in package.json were unrelated to deps)');
-        xit('should not pull backends if hash hasn\'t changed (changes in package.json were unrelated to deps)');
     });
 });
 
