@@ -775,8 +775,22 @@ describe('install', () => {
             install({config}).then(checkResult, checkResult);
         });
 
-        xit('failing to push on backends without pushMayFail === true should reject install');
-        xit('failing to push on backends with pushMayFail === true should be ignored');
+        it('failing to push on backends without pushMayFail === true should reject install', done => {
+            const AnError = class AnError extends Error {};
+
+            fakeBackends[0].backend.push = () => Promise.reject(new AnError());
+
+            assert.isRejected(install({config}), AnError).notify(done);
+        });
+
+        it('failing to push on backends with pushMayFail === true should be ignored', done => {
+            const AnError = class AnError extends Error {};
+
+            fakeBackends[0].backend.push = () => Promise.reject(new AnError());
+            fakeBackends[0].pushMayFail = true;
+
+            assert.isFulfilled(install({config})).notify(done);
+        });
     });
 });
 

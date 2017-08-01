@@ -104,8 +104,6 @@ describe('git-lfs', () => {
             gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0').then(checkResult, checkResult);
         });
 
-        xit('if clone fails, should reject with BackendError');
-
         it('should run git fetch only once in a run', done => {
             const checkResult = () => {
                 try {
