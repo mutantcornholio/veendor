@@ -52,7 +52,7 @@ describe('install', () => {
         config = {
             backends: fakeBackends,
             fallbackToNpm: true,
-            installOnlyDiff: true,
+            installDiff: true,
             packageHash: {}
         };
 
@@ -775,7 +775,6 @@ describe('install', () => {
             install({config}).then(checkResult, checkResult);
         });
 
-        xit('should not call `gitWrapper.olderRevision` if installDiffOnly is false');
         xit('failing to push on backends without pushMayFail === true should reject install');
         xit('failing to push on backends with pushMayFail === true should be ignored');
     });

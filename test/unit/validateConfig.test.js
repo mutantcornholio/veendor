@@ -92,7 +92,11 @@ describe('validateConfig', function () {
         assert(config.fallbackToNpm === true);
     });
 
-    xit('sets installOnlyDiff to true');
+    it('sets installDiff to true', () => {
+        validateConfig(config);
+
+        assert(config.installDiff === true);
+    });
 
     it('sets packageHash to {}', () => {
         validateConfig(config);
@@ -100,7 +104,36 @@ describe('validateConfig', function () {
         assert.isObject(config.packageHash);
     });
 
-    xit('should throw error if useGetHistory is set without depth option');
+    it('should throw error if useGitHistory is set and installDiff is false', () => {
+        config.useGitHistory = {depth: 5};
+        config.installDiff = false;
+
+        assert.throws(() => {
+            validateConfig(config);
+        }, validateConfig.InvalidUseGitHistoryError);
+    });
+
+    it('should throw error if useGitHistory is set without depth option', () => {
+        config.useGitHistory = {};
+
+        assert.throws(() => {
+            validateConfig(config);
+        }, validateConfig.InvalidUseGitHistoryError);
+    });
+
+    it('should throw error if useGitHistory.depth is zero or below zero', () => {
+        config.useGitHistory = {depth: 0};
+
+        assert.throws(() => {
+            validateConfig(config);
+        }, validateConfig.InvalidUseGitHistoryError);
+
+        config.useGitHistory = {depth: -2};
+
+        assert.throws(() => {
+            validateConfig(config);
+        }, validateConfig.InvalidUseGitHistoryError);
+    });
 
     it('should resolve backend from string to module', () => {
         config.backends[0].backend = 'local';
