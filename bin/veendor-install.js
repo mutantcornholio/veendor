@@ -1,7 +1,8 @@
 'use strict';
 
 const program = require('commander');
-const fs = require('fs');
+const fsExtra = require('fs-extra');
+const path = require('path');
 
 const install = require('../lib/install');
 const resolveConfig = require('../lib/resolveConfig');
@@ -15,15 +16,17 @@ program
     .description('Download and install node_modules')
     .option('-f, --force', 'overwrite node_modules if it already exists')
     .option('-c --config [configuration-file]')
+    .option('--debug', 'don\'t remove .veendor-debug.log')
     .parse(process.argv);
 
 const config = resolveConfig(program.config);
-// TODO: add -vvv support
 const daLogger = logger.setDefaultLogger(1, 3);
 
 install({force: program.force, config})
     .then(() => {
-        // TODO: removing log file
+        if (!(program.debug)) {
+            return fsExtra.remove(path.resolve(process.cwd(), '.veendor-debug.log'));
+        }
     }, e => {
         if (e instanceof install.NodeModulesAlreadyExistError) {
             return daLogger.error('\'node_modules\' directory already exists. Use -f option to remove it');

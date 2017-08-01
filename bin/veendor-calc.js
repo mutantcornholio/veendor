@@ -19,5 +19,5 @@ pkgJson
     .then(parsedPkgJson => {
         console.log(pkgJson.calcHash(parsedPkgJson, config.packageHash));
     }, error => {
-        throw error;
+        console.error(error);
     });

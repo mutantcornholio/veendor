@@ -3,7 +3,7 @@ const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
 const mockfs = require('mock-fs');
-const fsz = require('mz/fs');
+const fsExtra = require('fs-extra');
 const path = require('path');
 const _ = require('lodash');
 const tracer = require('tracer');
@@ -25,6 +25,10 @@ let fakeSha1;
 let sandbox;
 let fakeBackends;
 let config;
+
+// This class is used for generic error emulation,
+// if we want to test error propagation
+class AnError extends Error {}
 
 describe('install', () => {
     beforeEach(() => {
@@ -78,6 +82,17 @@ describe('install', () => {
         assert.isRejected(result, install.NodeModulesAlreadyExistError).notify(done);
     });
 
+    it('should fail if pkgJson rejects with EmptyPkgJsonError', done => {
+        sandbox.stub(pkgJson, 'parsePkgJson').rejects(new pkgJson.EmptyPkgJsonError);
+        mockfs({
+            'package.json': '{}'
+        });
+
+        const result = install({config});
+
+        assert.isRejected(result, pkgJson.EmptyPkgJsonError).notify(done);
+    });
+
     it('should delete node_modules, if force option is used', done => {
         mockfs({
             'node_modules': {some: {stuff: 'inside'}},
@@ -87,7 +102,7 @@ describe('install', () => {
         const nodeModules = path.join(process.cwd(), 'node_modules');
 
         install({force: true, config}).then(() => {
-            fsz.stat(nodeModules).then(() => {
+            fsExtra.stat(nodeModules).then(() => {
                 done(new Error('node_modules haven\'t been removed'));
             }, () => {
                 done();
@@ -170,7 +185,7 @@ describe('install', () => {
 
     it('should create cache directory before pull', done => {
         const checkResult = () => {
-            fsz.stat(path.resolve('.veendor', fakeBackends[0].alias)).then(() => done(), done);
+            fsExtra.stat(path.resolve('.veendor', fakeBackends[0].alias)).then(() => done(), done);
         };
 
         install({config}).then(checkResult, checkResult);
@@ -202,7 +217,7 @@ describe('install', () => {
 
         fakeBackends[0].backend.pull = () => {
             return new Promise((resolve, reject) => {
-                fsz.stat(path.resolve('.veendor', fakeBackends[0].alias, 'shouldBeDeleted')).then(
+                fsExtra.stat(path.resolve('.veendor', fakeBackends[0].alias, 'shouldBeDeleted')).then(
                     () => {done(new Error(`'.veendor/${fakeBackends[0].alias}/shouldBeDeleted' is not deleted`))},
                     (err) => {
                         if (err.code === 'ENOENT') {
@@ -234,7 +249,7 @@ describe('install', () => {
 
         fakeBackends[0].backend.pull = () => {
             return new Promise((resolve, reject) => {
-                fsz.stat(path.resolve('.veendor', fakeBackends[0].alias, 'shouldStay')).then(
+                fsExtra.stat(path.resolve('.veendor', fakeBackends[0].alias, 'shouldStay')).then(
                     () => {done()},
                     done
                 );
@@ -535,7 +550,7 @@ describe('install', () => {
             });
 
             const checkResult = () => {
-                fsz.stat(path.resolve('.veendor', fakeBackends[0].alias)).then(() => done(), done);
+                fsExtra.stat(path.resolve('.veendor', fakeBackends[0].alias)).then(() => done(), done);
             };
 
             const old1Pull = fakeBackends[1].backend.pull;
@@ -595,7 +610,7 @@ describe('install', () => {
 
             fakeBackends[0].backend.push = () => {
                 return new Promise(resolve => {
-                    fsz.stat(path.resolve('.veendor', fakeBackends[0].alias, 'shouldBe')).then(
+                    fsExtra.stat(path.resolve('.veendor', fakeBackends[0].alias, 'shouldBe')).then(
                         () => {done(new Error(`'.veendor/${fakeBackends[0].alias}/shouldBe' should be deleted`))},
                         (err) => {
                             if (err.code === 'ENOENT') {
@@ -637,7 +652,7 @@ describe('install', () => {
 
             fakeBackends[0].backend.push = () => {
                 return new Promise(resolve => {
-                    fsz.stat(path.resolve('.veendor', fakeBackends[0].alias, 'shouldStay')).then(
+                    fsExtra.stat(path.resolve('.veendor', fakeBackends[0].alias, 'shouldStay')).then(
                         () => {done()},
                         done
                     );
@@ -776,16 +791,12 @@ describe('install', () => {
         });
 
         it('failing to push on backends without pushMayFail === true should reject install', done => {
-            const AnError = class AnError extends Error {};
-
             fakeBackends[0].backend.push = () => Promise.reject(new AnError());
 
             assert.isRejected(install({config}), AnError).notify(done);
         });
 
         it('failing to push on backends with pushMayFail === true should be ignored', done => {
-            const AnError = class AnError extends Error {};
-
             fakeBackends[0].backend.push = () => Promise.reject(new AnError());
             fakeBackends[0].pushMayFail = true;
 
