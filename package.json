@@ -1,7 +1,7 @@
 {
   "name": "veendor",
-  "version": "0.0.0",
-  "description": "a tool for vendoring your npm dependencies into a git repository",
+  "version": "1.0.1",
+  "description": "a tool for stroing your npm dependencies in arbitraty storage",
   "main": "bin/veendor.js",
   "bin": {
     "veendor": "./bin/veendor.js"
