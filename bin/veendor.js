@@ -1,7 +1,9 @@
-var program = require('commander');
+#!/usr/bin/env node
+const program = require('commander');
+const version = require('../package.json').version;
 
 program
-    .version('0.0.0')
+    .version(version)
     .description('A tool for vendoring your npm dependencies')
     .command('calc', 'calculate and print your bundle id')
     .command('install', 'download and install node_modules')

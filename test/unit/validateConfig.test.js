@@ -63,6 +63,62 @@ describe('validateConfig', function () {
         }, validateConfig.EmptyBackendAliasError);
     });
 
+    it('should check whether backend\'s push options are boolean', () => {
+        config.backends[0].push = 'test';
+
+        assert.throws(() => {
+            validateConfig(config);
+        }, validateConfig.InvalidBackendOptionError);
+
+        config.backends[0].push = 1;
+
+        assert.throws(() => {
+            validateConfig(config);
+        }, validateConfig.InvalidBackendOptionError);
+
+        config.backends[0].push = () => {};
+
+        assert.throws(() => {
+            validateConfig(config);
+        }, validateConfig.InvalidBackendOptionError);
+    });
+
+    it('sets backend\'s push options to false', () => {
+        config.backends[0].push = true;
+        validateConfig(config);
+
+        assert(config.backends[0].push === true, 'defined option should stay');
+        assert(config.backends[1].push === false, 'config.backends[1].push should be `false`');
+    });
+
+    it('should check whether backend\'s push options are boolean', () => {
+        config.backends[0].pushMayFail = 'test';
+
+        assert.throws(() => {
+            validateConfig(config);
+        }, validateConfig.InvalidBackendOptionError);
+
+        config.backends[0].pushMayFail = 1;
+
+        assert.throws(() => {
+            validateConfig(config);
+        }, validateConfig.InvalidBackendOptionError);
+
+        config.backends[0].pushMayFail = () => {};
+
+        assert.throws(() => {
+            validateConfig(config);
+        }, validateConfig.InvalidBackendOptionError);
+    });
+
+    it('sets backend\'s pushMayFail options to false', () => {
+        config.backends[0].pushMayFail = true;
+        validateConfig(config);
+
+        assert(config.backends[0].pushMayFail === true, 'defined option should stay');
+        assert(config.backends[1].pushMayFail === false, 'config.backends[1].push should be `false`');
+    });
+
     it('should check whether backends aliases are unique', () => {
         config.backends[0].alias = config.backends[1].alias;
 
