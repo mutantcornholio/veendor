@@ -13,6 +13,16 @@ function fakeBackendConfig(alias) {
     }
 }
 
+function notifyAssert(assertion, done) {
+    try {
+        assertion();
+        done();
+    } catch (e) {
+        done(e);
+    }
+}
+
 module.exports = {
-    fakeBackendConfig
+    fakeBackendConfig,
+    notifyAssert
 };
