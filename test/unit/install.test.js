@@ -4,6 +4,7 @@ const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
 const mockfs = require('mock-fs');
 const fsExtra = require('fs-extra');
+const fs = require('fs');
 const path = require('path');
 const _ = require('lodash');
 const tracer = require('tracer');
@@ -15,7 +16,6 @@ const npmWrapper = require('../../lib/commandWrappers/npmWrapper');
 const backendsErrors = require('../../lib/errors');
 const logger = require('../../lib/logger');
 const helpers = require('./helpers');
-const fs = require("fs");
 
 const assert = chai.assert;
 chai.use(chaiAsPromised);
