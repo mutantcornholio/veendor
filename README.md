@@ -113,7 +113,9 @@ Accepts these options:
 {
     repo: 'git@github.com:you/your-vendors.git', // required. Git remote.
     compression: 'xz', // optional, defaults to 'gzip'. Also supports 'bzip2', 'xz'.
-    defaultBranch: 'braanch' // deafult branch of your repo. Defaults to 'master'
+    defaultBranch: 'braanch', // deafult branch of your repo. Defaults to 'master'
+    checkLfsAvailability: true // prevent veendor from running if git-lfs is not installed. 
+                               // optional, defaults to `false`. 
 }
 ```
 Note: while supporting git-lfs is not mandatory for your remote,
@@ -184,6 +186,7 @@ Called upon start while validating config.
 May be synchronous or asynchronous.  
 Should throw error or reject returning promise if backend-specific options in config
 are invalid.  
+If backend has some external dependencies, their availability may be checked here too.  
 May mutate options to set default values.  
 #### keepCache
 Boolean, optional, defaults to false.  

@@ -17,6 +17,7 @@ module.exports = {
             push: true,
             backend: 'git-lfs',
             options: {
+                checkLfsAvailability: true,
                 repo: 'git@github.com:mutantcornholio/veendor-vendors.git'
             }
         }
