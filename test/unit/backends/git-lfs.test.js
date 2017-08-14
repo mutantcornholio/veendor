@@ -13,6 +13,8 @@ const gitWrapper = require('../../../lib/commandWrappers/gitWrapper');
 const tarWrapper = require('../../../lib/commandWrappers/tarWrapper');
 const errors = require('../../../lib/errors');
 
+const {notifyAssert} = require('../helpers');
+
 let fakeRepo;
 let sandbox;
 let fakeHash;
@@ -222,38 +224,62 @@ describe('git-lfs', () => {
         });
     });
 
-    describe('.validateOptions', () => {
-        it('throws error if `repo` hasn\'t been passed', () => {
+    describe('.validateOptions', done => {
+        it('throws error if `repo` hasn\'t been passed', done => {
             delete defaultOptions.repo;
 
-            assert.throws(() => {
-                gitLfs.validateOptions(defaultOptions);
-            }, errors.InvalidOptionsError)
+            assert.isRejected(gitLfs.validateOptions(defaultOptions), errors.InvalidOptionsError).notify(done);
         });
 
-        it('checks valid compression', () => {
+        it('checks valid compression', done => {
             defaultOptions.compression = 'lsda';
 
-            assert.throws(() => {
-                gitLfs.validateOptions(defaultOptions);
-            }, errors.InvalidOptionsError)
+            assert.isRejected(gitLfs.validateOptions(defaultOptions), errors.InvalidOptionsError).notify(done);
         });
 
-        it('sets default compression type to `gzip`', () => {
+        it('sets default compression type to `gzip`', done => {
             delete defaultOptions.compression;
 
-            gitLfs.validateOptions(defaultOptions);
-
-            assert.equal(defaultOptions.compression, 'gzip');
+            gitLfs
+                .validateOptions(defaultOptions)
+                .then(() => {
+                    assert.equal(defaultOptions.compression, 'gzip');
+                    done();
+                }, done);
         });
 
-        it('sets default default branch to `master`', () => {
+        it('sets default default branch to `master`', done => {
             delete defaultOptions.defaultBranch;
 
-            gitLfs.validateOptions(defaultOptions);
-
-            assert.equal(defaultOptions.defaultBranch, 'master');
+            gitLfs
+                .validateOptions(defaultOptions)
+                .then(() => {
+                    notifyAssert(assert.equal.bind(null, defaultOptions.defaultBranch, 'master'), done);
+                }, done);
         });
+
+        it('checks if checkLfsAvailability is boolean', done => {
+            defaultOptions.checkLfsAvailability = 'test';
+
+            assert.isRejected(gitLfs.validateOptions(defaultOptions), errors.InvalidOptionsError).notify(done);
+        });
+
+        it('sets default checkLfsAvailability to `false`', done => {
+            gitLfs
+                .validateOptions(defaultOptions)
+                .then(() => {
+                    notifyAssert(assert.equal.bind(null, defaultOptions.checkLfsAvailability, false), done);
+                }, done);
+        });
+
+        it('rejects with `GitLfsNotAvailableError` if git lfs is not available ' +
+            'and `checkLfsAvailability` was set to \'true\'', done => {
+            defaultOptions.checkLfsAvailability = true;
+
+            sandbox.stub(gitWrapper, 'isGitLfsAvailable').rejects(new gitWrapper.GitLfsNotAvailableError);
+
+            assert.isRejected(gitLfs.validateOptions(defaultOptions), gitWrapper.GitLfsNotAvailableError).notify(done);
+        })
     })
 });
 
