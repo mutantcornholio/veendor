@@ -1,10 +1,18 @@
 const {describe, it, beforeEach, afterEach} = require('mocha');
 
-const assert = require('chai').assert;
+const chai = require('chai');
+const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
+
+const assert = chai.assert;
+chai.use(chaiAsPromised);
 
 const validateConfig = require('../../lib/validateConfig');
 const helpers = require('./helpers');
+
+// This class is used for generic error emulation,
+// if we want to test error propagation
+class AnError extends Error {}
 
 let config;
 
@@ -15,72 +23,54 @@ describe('validateConfig', function () {
         };
     });
 
-    it('should throw error if config does not contain \'backends\' section', () => {
+    it('should reject with EmptyBackendsPropertyError if config does not contain \'backends\' section', () => {
         delete config.backends;
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.EmptyBackendsPropertyError);
+        assert.isRejected(validateConfig(config), validateConfig.EmptyBackendsPropertyError);
     });
 
     it('should throw error if \'backends\' section is empty', () => {
         config.backends = [];
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.EmptyBackendsPropertyError);
+        assert.isRejected(validateConfig(config), validateConfig.EmptyBackendsPropertyError);
     });
 
     it('should check whether backends have pull functions', () => {
         delete config.backends[0].backend.pull;
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidBackendError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidBackendError);
     });
 
     it('should check whether backends have push functions', () => {
         delete config.backends[0].backend.push;
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidBackendError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidBackendError);
     });
 
     it('should check whether backends have validateOptions functions', () => {
         delete config.backends[0].backend.validateOptions;
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidBackendError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidBackendError);
     });
 
     it('should check whether backends have aliases', () => {
         delete config.backends[0].alias;
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.EmptyBackendAliasError);
+        assert.isRejected(validateConfig(config), validateConfig.EmptyBackendAliasError);
     });
 
     it('should check whether backend\'s push options are boolean', () => {
         config.backends[0].push = 'test';
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidBackendOptionError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidBackendOptionError);
 
         config.backends[0].push = 1;
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidBackendOptionError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidBackendOptionError);
 
         config.backends[0].push = () => {};
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidBackendOptionError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidBackendOptionError);
     });
 
     it('sets backend\'s push options to false', () => {
@@ -91,24 +81,18 @@ describe('validateConfig', function () {
         assert(config.backends[1].push === false, 'config.backends[1].push should be `false`');
     });
 
-    it('should check whether backend\'s push options are boolean', () => {
+    it('should check whether backend\'s pushMayFail options are boolean', () => {
         config.backends[0].pushMayFail = 'test';
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidBackendOptionError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidBackendOptionError);
 
         config.backends[0].pushMayFail = 1;
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidBackendOptionError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidBackendOptionError);
 
         config.backends[0].pushMayFail = () => {};
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidBackendOptionError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidBackendOptionError);
     });
 
     it('sets backend\'s pushMayFail options to false', () => {
@@ -122,9 +106,7 @@ describe('validateConfig', function () {
     it('should check whether backends aliases are unique', () => {
         config.backends[0].alias = config.backends[1].alias;
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.AliasesNotUniqueError);
+        assert.isRejected(validateConfig(config), validateConfig.AliasesNotUniqueError);
     });
 
     it('should call backend\'s validateOptions function', () => {
@@ -140,6 +122,12 @@ describe('validateConfig', function () {
 
         backend0Mock.verify();
         backend1Mock.verify();
+    });
+
+    it('should reject if backend\'s validateOptions throws', () => {
+        sinon.stub(config.backends[0].backend, 'validateOptions').throws(new AnError);
+
+        assert.isRejected(validateConfig(config), AnError);
     });
 
     it('sets fallbackToNpm to true', () => {
@@ -164,31 +152,23 @@ describe('validateConfig', function () {
         config.useGitHistory = {depth: 5};
         config.installDiff = false;
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidUseGitHistoryError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidUseGitHistoryError);
     });
 
     it('should throw error if useGitHistory is set without depth option', () => {
         config.useGitHistory = {};
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidUseGitHistoryError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidUseGitHistoryError);
     });
 
     it('should throw error if useGitHistory.depth is zero or below zero', () => {
         config.useGitHistory = {depth: 0};
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidUseGitHistoryError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidUseGitHistoryError);
 
         config.useGitHistory = {depth: -2};
 
-        assert.throws(() => {
-            validateConfig(config);
-        }, validateConfig.InvalidUseGitHistoryError);
+        assert.isRejected(validateConfig(config), validateConfig.InvalidUseGitHistoryError);
     });
 
     it('should resolve backend from string to module', () => {

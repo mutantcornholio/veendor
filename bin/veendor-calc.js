@@ -2,7 +2,7 @@
 
 const program = require('commander');
 const path = require('path');
-const fs = require('fs');
+const fsExtra = require('fs-extra');
 
 const pkgJson = require('../lib/pkgjson');
 const resolveConfig = require('../lib/resolveConfig');
@@ -12,10 +12,14 @@ program
     .option('-c --config [configuration-file]')
     .parse(process.argv);
 
-const config = resolveConfig(program.config);
-const pkgJsonString = fs.readFileSync(path.resolve(process.cwd(), 'package.json'));
-pkgJson
-    .parsePkgJson(pkgJsonString)
+let config;
+
+resolveConfig(program.config)
+    .then(resolvedConfig => {
+        config = resolvedConfig;
+        return fsExtra.readFile(path.resolve(process.cwd(), 'package.json'));
+    })
+    .then(pkgJson.parsePkgJson)
     .then(parsedPkgJson => {
         console.log(pkgJson.calcHash(parsedPkgJson, config.packageHash));
     }, error => {

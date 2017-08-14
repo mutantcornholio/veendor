@@ -19,10 +19,12 @@ program
     .option('--debug', 'don\'t remove .veendor-debug.log')
     .parse(process.argv);
 
-const config = resolveConfig(program.config);
 const daLogger = logger.setDefaultLogger(1, 3);
 
-install({force: program.force, config})
+resolveConfig(program.config)
+    .then(config => {
+        return install({force: program.force, config})
+    })
     .then(() => {
         if (!(program.debug)) {
             return fsExtra.remove(path.resolve(process.cwd(), '.veendor-debug.log'));

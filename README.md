@@ -179,9 +179,10 @@ Should take node_modules from `process.cwd()` and
 upload it to the remote as bundle with `hash`.  
 `options` and `cacheDir` are same as in `pull`.  
 Promise resolves if succeded, rejects if not.  
-#### validateOptions(options) => undefined
+#### validateOptions(options) => undefined|Promise
 Called upon start while validating config.  
-Should throw error if backend-specific options in config
+May be synchronous or asynchronous.  
+Should throw error or reject returning promise if backend-specific options in config
 are invalid.  
 May mutate options to set default values.  
 #### keepCache
