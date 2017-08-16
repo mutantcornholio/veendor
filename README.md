@@ -122,7 +122,7 @@ Note: while supporting git-lfs is not mandatory for your remote,
 it's pretty much required due to future repo size regressions.  
 Don't forget to set it up — add following to your `.gitattributes`:
 ```
-.tar.gz filter=lfs diff=lfs merge=lfs -text
+*.tar.gz filter=lfs diff=lfs merge=lfs -text
 ```
 (replace `.tar.gz` with your selected compressison format)  
 [more about git-lfs](git-lfs.github.com)
