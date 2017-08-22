@@ -48,6 +48,7 @@ describe('git-lfs', () => {
         sandbox.stub(gitWrapper, 'tag').resolves();
         sandbox.stub(gitWrapper, 'push').resolves();
         sandbox.stub(gitWrapper, 'isGitRepo').resolves();
+        sandbox.stub(gitWrapper, 'resetToRemote').resolves();
         sandbox.stub(tarWrapper, 'createArchive').resolves();
         sandbox.stub(tarWrapper, 'extractArchive').resolves();
     });
@@ -165,6 +166,15 @@ describe('git-lfs', () => {
         it('checks out default branch', done => {
             const checkResult = expectCalls.bind(null, [{
                 spy: gitWrapper.checkout,
+                args: [sinon.match('.veendor/git-lfs.0/repo'), defaultOptions.defaultBranch]
+            }], done);
+
+            gitLfs.push(fakeHash, defaultOptions, '.veendor/git-lfs.0').then(checkResult, checkResult);
+        });
+
+        it('resets branch to remote state', done => {
+            const checkResult = expectCalls.bind(null, [{
+                spy: gitWrapper.resetToRemote,
                 args: [sinon.match('.veendor/git-lfs.0/repo'), defaultOptions.defaultBranch]
             }], done);
 
