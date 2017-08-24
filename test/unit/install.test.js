@@ -511,6 +511,39 @@ describe('install', () => {
             install({config}).then(checkResult, checkResult);
         });
 
+        it('should not call `npmWrapper.uninstall` for modules moved from devdeps to deps', done => {
+            PKGJSON.devDependencies.c = fakePkgJson2.dependencies.c;
+            delete PKGJSON.dependencies.c;
+
+            mockfs({
+                'package.json': JSON.stringify(PKGJSON)
+            });
+
+            fakeBackends[0].backend.pull = (hash) => {
+                if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
+                    return Promise.reject(new backendsErrors.BundleNotFoundError);
+                } else if (hash === 'fakePkgJson2Hash') {
+                    return Promise.resolve();
+                } else {
+                    throw new Error('Something is unmocked');
+                }
+            };
+
+            npmWrapperStub.restore();
+            const npmWrapperMock = sandbox.mock(npmWrapper);
+            npmWrapperMock.expects('uninstall').never();
+            npmWrapperMock.expects('install').never();
+
+            const checkResult = checkMockResult.bind(null, [npmWrapperMock], done);
+
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            install({config}).then(checkResult, checkResult);
+        });
+
         it('should call `push` on all backends with push: true option after partial npm install', done => {
             const backendMock0 = sandbox.mock(fakeBackends[0].backend);
             const backendMock1 = sandbox.mock(fakeBackends[1].backend);
