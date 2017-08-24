@@ -54,11 +54,28 @@ describe('pkgjson', function () {
             const spyCall = fakeSha1.update.getCall(0);
 
             assert(fakeSha1.update.called, 'sha1.update hasn\'t been called');
-            assert.deepEqual(spyCall.args[0], JSON.stringify(_.assign(
-                {},
-                PKGJSON_CONTENTS.dependencies,
-                PKGJSON_CONTENTS.devDependencies
-            )));
+            assert.deepEqual(spyCall.args[0], JSON.stringify([
+                'a@666',
+                'b@^228',
+                'c@1.4.88',
+                'd@^0.0.1'
+            ]));
+        });
+
+        it('should sort deps before hashing', function () {
+            PKGJSON_CONTENTS.devDependencies.a = PKGJSON_CONTENTS.dependencies.a;
+            delete PKGJSON_CONTENTS.dependencies.a;
+            pkgjson.calcHash(PKGJSON_CONTENTS);
+
+            const spyCall = fakeSha1.update.getCall(0);
+
+            assert(fakeSha1.update.called, 'sha1.update hasn\'t been called');
+            assert.deepEqual(spyCall.args[0], JSON.stringify([
+                'a@666',
+                'b@^228',
+                'c@1.4.88',
+                'd@^0.0.1'
+            ]));
         });
 
         it('should return result of SHA1 digest', function () {

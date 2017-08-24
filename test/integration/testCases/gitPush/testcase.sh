@@ -9,8 +9,8 @@ node "$rootdir/bin/veendor.js" install --debug
 
 git clone "$(pwd)/repo" repolocal
 cd repolocal
-git checkout veendor-dffeec0effe0fa8c62c53017bcfbfd0275fd20c4
-tar -xf dffeec0effe0fa8c62c53017bcfbfd0275fd20c4.tar.gz
+git checkout veendor-1f15a972350cb78a37010a59330802b6fff35433
+tar -xf 1f15a972350cb78a37010a59330802b6fff35433.tar.gz
 
 if [[ ! -f "node_modules/deep-object-diff/package.json" ]]; then
     echo "gitPush failed; node_modules/deep-object-diff/package.json is not there"
