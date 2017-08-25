@@ -173,6 +173,9 @@ Backend should be an object with these properties:
 Should search for bundle with provided hash and
 place node_modules into `process.cwd()`.
 Promise resolves if succeded, rejects if not.  
+Promise must be rejected with `require('veendor/lib/errors').BundleNotFoundError`
+if bundles not found, or with any other error on generic fail. 
+Failing with generic fail crash veendor.  
 Options is object called `backend-specific options` earlier.  
 If backend needs to store some temp data,
 veendor provides a clean `cacheDir`

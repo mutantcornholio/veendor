@@ -13,7 +13,7 @@ const install = require('../../lib/install');
 const pkgJson = require('../../lib/pkgjson');
 const gitWrapper = require('../../lib/commandWrappers/gitWrapper');
 const npmWrapper = require('../../lib/commandWrappers/npmWrapper');
-const backendsErrors = require('../../lib/errors');
+const errors = require('../../lib/errors');
 const logger = require('../../lib/logger');
 const helpers = require('./helpers');
 
@@ -34,12 +34,8 @@ describe('install', () => {
     beforeEach(() => {
         sandbox = sinon.sandbox.create();
 
-        mockfs({
-            'package.json': JSON.stringify(PKGJSON)
-        });
-
         fakeBackends = [helpers.fakeBackendConfig('fakeBackends[0]'), helpers.fakeBackendConfig('fakeBackends[1]')];
-        fakeBackends[0].backend.pull = () => Promise.reject(new backendsErrors.BundleNotFoundError);
+        fakeBackends[0].backend.pull = () => Promise.reject(new errors.BundleNotFoundError);
 
         sandbox.stub(npmWrapper, 'installAll').resolves();
 
@@ -52,6 +48,10 @@ describe('install', () => {
                 baz: '6.6.6'
             }
         };
+
+        mockfs({
+            'package.json': JSON.stringify(PKGJSON)
+        });
 
         config = {
             backends: fakeBackends,
@@ -138,11 +138,33 @@ describe('install', () => {
         const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend)
             .expects('pull')
             .withArgs(fakeSha1)
-            .rejects(new backendsErrors.BundleNotFoundError);
+            .rejects(new errors.BundleNotFoundError);
         const fakeBackends1Mock = sandbox.mock(fakeBackends[1].backend)
             .expects('pull')
             .withArgs(fakeSha1)
             .resolves();
+
+        const checkResult = checkMockResult.bind(null, [fakeBackends0Mock, fakeBackends1Mock], done);
+
+        install({
+            config: {backends: fakeBackends}
+        }).then(checkResult, checkResult);
+    });
+
+    it('should stop calling `pull` if backend fails with generic error', done => {
+
+
+        mockfs({
+            'package.json': JSON.stringify(PKGJSON)
+        });
+
+        const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend)
+            .expects('pull')
+            .withArgs(fakeSha1)
+            .rejects(new AnError('life sucks'));
+        const fakeBackends1Mock = sandbox.mock(fakeBackends[1].backend)
+            .expects('pull')
+            .never();
 
         const checkResult = checkMockResult.bind(null, [fakeBackends0Mock, fakeBackends1Mock], done);
 
@@ -172,7 +194,7 @@ describe('install', () => {
         const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend)
             .expects('pull')
             .withArgs(sinon.match.any, sinon.match.same(fakeBackends[0].options))
-            .rejects(new backendsErrors.BundleNotFoundError);
+            .rejects(new errors.BundleNotFoundError);
         const fakeBackends1Mock = sandbox.mock(fakeBackends[1].backend)
             .expects('pull')
             .withArgs(sinon.match.any, sinon.match.same(fakeBackends[1].options))
@@ -195,7 +217,7 @@ describe('install', () => {
         const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend)
             .expects('pull')
             .withArgs(sinon.match.any, sinon.match.any, sinon.match(`.veendor/${fakeBackends[0].alias}`))
-            .rejects(new backendsErrors.BundleNotFoundError);
+            .rejects(new errors.BundleNotFoundError);
         const fakeBackends1Mock = sandbox.mock(fakeBackends[1].backend)
             .expects('pull')
             .withArgs(sinon.match.any, sinon.match.any, sinon.match(`.veendor/${fakeBackends[1].alias}`))
@@ -229,7 +251,7 @@ describe('install', () => {
                     }
                 );
 
-                return reject(new backendsErrors.BundleNotFoundError);
+                return reject(new errors.BundleNotFoundError);
             });
         };
 
@@ -254,7 +276,7 @@ describe('install', () => {
                     done
                 );
 
-                return reject(new backendsErrors.BundleNotFoundError);
+                return reject(new errors.BundleNotFoundError);
             });
         };
 
@@ -336,7 +358,7 @@ describe('install', () => {
             fakeBackends[0].push = true;
             fakeBackends[1].backend.pull = (hash) => {
                 if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
-                    return Promise.reject(new backendsErrors.BundleNotFoundError);
+                    return Promise.reject(new errors.BundleNotFoundError);
                 } else if (hash === 'fakePkgJson2Hash') {
                     return Promise.resolve();
                 } else {
@@ -392,13 +414,13 @@ describe('install', () => {
 
         it('should call `pull` on backends with gitWrapper.olderRevision\'s hash', done => {
             const backend0Mock = sandbox.mock(fakeBackends[0].backend);
-            backend0Mock.expects('pull').withArgs('PKGJSONHash').rejects(new backendsErrors.BundleNotFoundError);
-            backend0Mock.expects('pull').withArgs('PKGJSONHash').rejects(new backendsErrors.BundleNotFoundError);
+            backend0Mock.expects('pull').withArgs('PKGJSONHash').rejects(new errors.BundleNotFoundError);
+            backend0Mock.expects('pull').withArgs('PKGJSONHash').rejects(new errors.BundleNotFoundError);
             backend0Mock.expects('pull').withArgs('fakePkgJson1Hash').resolves();
 
             const backend1Mock = sandbox.mock(fakeBackends[1].backend);
-            backend1Mock.expects('pull').withArgs('PKGJSONHash').rejects(new backendsErrors.BundleNotFoundError);
-            backend1Mock.expects('pull').withArgs('PKGJSONHash').rejects(new backendsErrors.BundleNotFoundError);
+            backend1Mock.expects('pull').withArgs('PKGJSONHash').rejects(new errors.BundleNotFoundError);
+            backend1Mock.expects('pull').withArgs('PKGJSONHash').rejects(new errors.BundleNotFoundError);
             backend1Mock.expects('pull').withArgs('fakePkgJson1Hash').never();
 
             const checkResult = checkMockResult.bind(null, [backend0Mock, backend1Mock], done);
@@ -458,7 +480,7 @@ describe('install', () => {
 
             fakeBackends[0].backend.pull = (hash) => {
                 if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
-                    return Promise.reject(new backendsErrors.BundleNotFoundError);
+                    return Promise.reject(new errors.BundleNotFoundError);
                 } else if (hash === 'fakePkgJson2Hash') {
                     return Promise.resolve();
                 } else {
@@ -489,7 +511,7 @@ describe('install', () => {
 
             fakeBackends[0].backend.pull = (hash) => {
                 if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
-                    return Promise.reject(new backendsErrors.BundleNotFoundError);
+                    return Promise.reject(new errors.BundleNotFoundError);
                 } else if (hash === 'fakePkgJson2Hash') {
                     return Promise.resolve();
                 } else {
@@ -521,7 +543,7 @@ describe('install', () => {
 
             fakeBackends[0].backend.pull = (hash) => {
                 if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
-                    return Promise.reject(new backendsErrors.BundleNotFoundError);
+                    return Promise.reject(new errors.BundleNotFoundError);
                 } else if (hash === 'fakePkgJson2Hash') {
                     return Promise.resolve();
                 } else {
@@ -638,7 +660,7 @@ describe('install', () => {
                 mockfsConfig['.veendor'][fakeBackends[0].alias] = {'shouldBe': 'deleted'};
                 mockfs(mockfsConfig);
 
-                return Promise.reject(new backendsErrors.BundleNotFoundError);
+                return Promise.reject(new errors.BundleNotFoundError);
             };
 
             fakeBackends[0].backend.push = () => {
@@ -680,7 +702,7 @@ describe('install', () => {
                 mockfsConfig['.veendor'][fakeBackends[0].alias] = {'shouldStay': 'true'};
                 mockfs(mockfsConfig);
 
-                return Promise.reject(new backendsErrors.BundleNotFoundError);
+                return Promise.reject(new errors.BundleNotFoundError);
             };
 
             fakeBackends[0].backend.push = () => {
@@ -722,7 +744,7 @@ describe('install', () => {
         });
 
         it('should call `push` on all backends with push: true option after npm install', done => {
-            fakeBackends[1].backend.pull = () => Promise.reject(new backendsErrors.BundleNotFoundError);
+            fakeBackends[1].backend.pull = () => Promise.reject(new errors.BundleNotFoundError);
             const backendMock0 = sandbox.mock(fakeBackends[0].backend);
             const backendMock1 = sandbox.mock(fakeBackends[1].backend);
 
@@ -735,7 +757,7 @@ describe('install', () => {
         });
 
         it('should call `push` on all backends with push: true option after npm install (with history)', done => {
-            fakeBackends[1].backend.pull = () => Promise.reject(new backendsErrors.BundleNotFoundError);
+            fakeBackends[1].backend.pull = () => Promise.reject(new errors.BundleNotFoundError);
             const backendMock0 = sandbox.mock(fakeBackends[0].backend);
             const backendMock1 = sandbox.mock(fakeBackends[1].backend);
 
