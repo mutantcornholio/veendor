@@ -49,6 +49,8 @@ describe('git-lfs', () => {
         sandbox.stub(gitWrapper, 'push').resolves();
         sandbox.stub(gitWrapper, 'isGitRepo').resolves();
         sandbox.stub(gitWrapper, 'resetToRemote').resolves();
+        sandbox.stub(gitWrapper, 'isGitLfsAvailable').resolves();
+        sandbox.stub(gitWrapper, 'lfsPull').resolves();
         sandbox.stub(tarWrapper, 'createArchive').resolves();
         sandbox.stub(tarWrapper, 'extractArchive').resolves();
     });
@@ -109,17 +111,13 @@ describe('git-lfs', () => {
 
         it('should run git fetch only once in a run', done => {
             const checkResult = () => {
-                try {
-                    const calls = gitWrapper.fetch.getCalls();
-                    assert.equal(
-                        calls.length,
-                        1,
-                        `Expected 'gitWrapper.fetch' to be called once`
-                    );
-                    done();
-                } catch (e) {
-                    done(e);
-                }
+                const calls = gitWrapper.fetch.getCalls();
+                notifyAssert(assert.equal.bind(
+                    null,
+                    calls.length,
+                    1,
+                    `Expected 'gitWrapper.fetch' to be called once`
+                ), done);
             };
 
             gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0')
@@ -130,6 +128,32 @@ describe('git-lfs', () => {
                     return gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0');
                 })
                 .then(checkResult, checkResult);
+        });
+
+        it('should run git lfs pull if git lfs is available', done => {
+            const checkResult = expectCalls.bind(null, [{
+                spy: gitWrapper.lfsPull,
+                args: [sinon.match('.veendor/git-lfs.0/repo')]
+            }], done);
+
+            gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0').then(checkResult, checkResult);
+        });
+
+        it('should not run git lfs pull if git lfs is not available', done => {
+            gitWrapper.isGitLfsAvailable.restore();
+            sandbox.stub(gitWrapper, 'isGitLfsAvailable').rejects(new gitWrapper.GitLfsNotAvailableError);
+
+            const checkResult = () => {
+                const calls = gitWrapper.lfsPull.getCalls();
+                notifyAssert(assert.equal.bind(
+                    null,
+                    calls.length,
+                    0,
+                    `Expected 'gitWrapper.lfsPull' not to be called`
+                ), done);
+            };
+
+            gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0').then(checkResult, checkResult);
         });
     });
 
@@ -286,6 +310,7 @@ describe('git-lfs', () => {
             'and `checkLfsAvailability` was set to \'true\'', done => {
             defaultOptions.checkLfsAvailability = true;
 
+            gitWrapper.isGitLfsAvailable.restore();
             sandbox.stub(gitWrapper, 'isGitLfsAvailable').rejects(new gitWrapper.GitLfsNotAvailableError);
 
             assert.isRejected(gitLfs.validateOptions(defaultOptions), gitWrapper.GitLfsNotAvailableError).notify(done);
