@@ -100,6 +100,24 @@ describe('git-lfs', () => {
                 .notify(done);
         });
 
+        it('does not run tar if tag not found', done => {
+            gitWrapper.checkout.restore();
+            sandbox.stub(gitWrapper, 'checkout').rejects(new Error);
+
+            const checkResult = () => {
+                setTimeout(() => {
+                    if (tarWrapper.extractArchive.notCalled) {
+                        return done();
+                    }
+
+                    done(new Error('Expected `tarWrapper.extractArchive` not to be called'));
+                }, 1); // Yep, async world. Setting timeouts just to be sure.
+            };
+
+
+            gitLfs.pull(fakeHash, defaultOptions, '.veendor/git-lfs.0').then(checkResult, checkResult);
+        });
+
         it('unpacks the archive to $(pwd)', done => {
             const checkResult = expectCalls.bind(null, [{
                 spy: tarWrapper.extractArchive,
