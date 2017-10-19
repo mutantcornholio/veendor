@@ -1,6 +1,6 @@
 {
   "name": "veendor",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "description": "a tool for stroing your npm dependencies in arbitraty storage",
   "main": "bin/veendor.js",
   "bin": {

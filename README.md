@@ -184,6 +184,9 @@ Should take node_modules from `process.cwd()` and
 upload it to the remote as bundle with `hash`.  
 `options` and `cacheDir` are same as in `pull`.  
 Promise resolves if succeded, rejects if not.  
+Promise must be rejected with `require('veendor/lib/errors').BundleAlreadyExistsError`
+if can't push because there's another bundle there.  
+This is common race-condition and veendor will re-pull new bundle on this error.   
 #### validateOptions(options) => undefined|Promise
 Called upon start while validating config.  
 May be synchronous or asynchronous.  
