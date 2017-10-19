@@ -26,9 +26,6 @@ let sandbox;
 let fakeBackends;
 let config;
 
-// This class is used for generic error emulation,
-// if we want to test error propagation
-class AnError extends Error {}
 
 describe('install', () => {
     beforeEach(() => {
@@ -161,7 +158,7 @@ describe('install', () => {
         const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend)
             .expects('pull')
             .withArgs(fakeSha1)
-            .rejects(new AnError('life sucks'));
+            .rejects(new helpers.AnError('life sucks'));
         const fakeBackends1Mock = sandbox.mock(fakeBackends[1].backend)
             .expects('pull')
             .never();
@@ -846,16 +843,53 @@ describe('install', () => {
         });
 
         it('failing to push on backends without pushMayFail === true should reject install', done => {
-            fakeBackends[0].backend.push = () => Promise.reject(new AnError());
+            fakeBackends[0].backend.push = () => Promise.reject(new helpers.AnError());
 
-            assert.isRejected(install({config}), AnError).notify(done);
+            assert.isRejected(install({config}), helpers.AnError).notify(done);
         });
 
         it('failing to push on backends with pushMayFail === true should be ignored', done => {
-            fakeBackends[0].backend.push = () => Promise.reject(new AnError());
+            fakeBackends[0].backend.push = () => Promise.reject(new helpers.AnError());
             fakeBackends[0].pushMayFail = true;
 
             assert.isFulfilled(install({config})).notify(done);
+        });
+
+        it('failing to push with BundleAlreadyExistsError should call backend.pull once again', done => {
+            let turn = 0;
+            fakeBackends[0].backend.push = () => Promise.reject(new errors.BundleAlreadyExistsError());
+            fakeBackends[0].backend.pull = () => {
+                if (turn === 1) {
+                    return Promise.resolve();
+                }
+                turn++;
+
+                return Promise.reject(new errors.BundleNotFoundError);
+            };
+
+            assert.isFulfilled(install({config})).notify(error => {
+                if (error) {
+                    return done(error);
+                }
+
+                try {
+                    assert.equal(turn, 1);
+                    done();
+                } catch (e) {
+                    done(e);
+                }
+            });
+        });
+
+        it('failing to push with BundleAlreadyExistsError should call backend.pull only once', done => {
+            let turn = 0;
+            fakeBackends[0].backend.push = () => Promise.reject(new errors.BundleAlreadyExistsError());
+            fakeBackends[0].backend.pull = () => {
+                turn++;
+                return Promise.reject(new errors.BundleNotFoundError);
+            };
+
+            assert.isRejected(install({config}), errors.BundleAlreadyExistsError).notify(done);
         });
     });
 });

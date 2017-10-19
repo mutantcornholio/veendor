@@ -98,6 +98,9 @@ describe('local', () => {
 
     describe('push', () => {
         it('should pack node_modules to target directory', done => {
+            delete mockfsConfig[`target/${fakeHash}.tar.gz`];
+            mockfs(mockfsConfig);
+
             const checkResult = expectCalls.bind(null, [{
                 spy: tarWrapper.createArchive,
                 args: [
@@ -108,6 +111,12 @@ describe('local', () => {
             }], done);
 
             local.push(fakeHash, defaultOptions, '.veendor/local').then(checkResult, checkResult);
+        });
+
+        it('should reject with BundleAlreadyExistsError if bundle with that name already in directory', done => {
+            assert
+                .isRejected(local.push(fakeHash, defaultOptions), errors.BundleAlreadyExistsError)
+                .notify(done);
         });
     });
 

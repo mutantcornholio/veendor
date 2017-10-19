@@ -22,7 +22,13 @@ function notifyAssert(assertion, done) {
     }
 }
 
+
+// This class is used as `generic error`,
+// if we want to test error propagation
+class AnError extends Error {}
+
 module.exports = {
     fakeBackendConfig,
-    notifyAssert
+    notifyAssert,
+    AnError,
 };

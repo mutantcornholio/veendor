@@ -10,10 +10,6 @@ chai.use(chaiAsPromised);
 const validateConfig = require('../../lib/validateConfig');
 const helpers = require('./helpers');
 
-// This class is used for generic error emulation,
-// if we want to test error propagation
-class AnError extends Error {}
-
 let config;
 
 describe('validateConfig', function () {
@@ -125,9 +121,9 @@ describe('validateConfig', function () {
     });
 
     it('should reject if backend\'s validateOptions throws', () => {
-        sinon.stub(config.backends[0].backend, 'validateOptions').throws(new AnError);
+        sinon.stub(config.backends[0].backend, 'validateOptions').throws(new helpers.AnError);
 
-        assert.isRejected(validateConfig(config), AnError);
+        assert.isRejected(validateConfig(config), helpers.AnError);
     });
 
     it('sets fallbackToNpm to true', () => {

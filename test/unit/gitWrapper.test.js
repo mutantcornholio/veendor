@@ -1,5 +1,6 @@
 const gitWrapper = require('../../lib/commandWrappers/gitWrapper');
 const helpers = require('../../lib/commandWrappers/helpers');
+const testHelpers = require('./helpers');
 
 const _ = require('lodash');
 
@@ -68,6 +69,53 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.olderRevision(process.cwd(), 'test', 2);
             assert.becomes(result, 'this is elder file.\nShow some respect.\n').notify(done);
+        });
+    });
+
+    describe('push', () => {
+        it('should throw RefAlreadyExistsError when git output shows it', done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[0] === 'push') {
+                    return Promise.reject(new helpers.CommandReturnedNonZeroError(
+                        'Command [git push] returned 1',
+                        'HEAD is now at 7b3abff Initial commit\n' +
+                        'Git LFS: (1 of 1 files) 47.46 MB / 47.46 MB\n' +
+                        'To git@github.com:mutantcornholio/veendor-cache.git\n' +
+                        ' ! [rejected]        veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux' +
+                        ' -> veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux (already exists)\n' +
+                        'error: failed to push some refs to \'git@github.yandex-team.ru:market/veendor-cache.git\'\n' +
+                        'hint: Updates were rejected because the tag already exists in the remote.'
+                    ));
+                }
+
+                if (executable === 'git' && args[0] === 'remote') {
+                    return Promise.resolve('origin');
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+            });
+
+            const result = gitWrapper.push(process.cwd(), 'veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux');
+
+            assert.isRejected(result, gitWrapper.RefAlreadyExistsError).notify(done);
+        });
+        
+        it('should throw original generic error from git', done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[0] === 'push') {
+                    return Promise.reject(new testHelpers.AnError('test'));
+                }
+
+                if (executable === 'git' && args[0] === 'remote') {
+                    return Promise.resolve('origin');
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+            });
+
+            const result = gitWrapper.push(process.cwd(), 'veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux');
+
+            assert.isRejected(result, testHelpers.AnError).notify(done);
         });
     });
 });
