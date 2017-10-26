@@ -275,6 +275,15 @@ describe('git-lfs', () => {
             gitLfs.push(fakeHash, defaultOptions, '.veendor/git-lfs.0').then(checkResult, checkResult);
         });
 
+        it('throws BundleAlreadyExistsError if git tag rejected with RefAlreadyExistsError', done => {
+            gitWrapper.tag.restore();
+            sandbox.stub(gitWrapper, 'tag').rejects(new gitWrapper.RefAlreadyExistsError);
+
+            const result = gitLfs.push(fakeHash, defaultOptions, '.veendor/git-lfs.0');
+
+            assert.isRejected(result, errors.BundleAlreadyExistsError).notify(done);
+        });
+
         it('throws BundleAlreadyExistsError if git push rejected with RefAlreadyExistsError', done => {
             gitWrapper.push.restore();
             sandbox.stub(gitWrapper, 'push').rejects(new gitWrapper.RefAlreadyExistsError);

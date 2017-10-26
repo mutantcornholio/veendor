@@ -72,6 +72,25 @@ describe('gitWrapper', () => {
         });
     });
 
+    describe('tag', () => {
+        it('should throw RefAlreadyExistsError when git output shows it', done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[0] === 'tag') {
+                    return Promise.reject(new helpers.CommandReturnedNonZeroError(
+                        'Command [git tag] returned 1',
+                        'fatal: tag \'veendor-32097f47c59765895b8b9d2002fe40ddc0de38bf-linux\' already exists'
+                    ));
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+            });
+
+            const result = gitWrapper.tag(process.cwd(), 'veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux');
+
+            assert.isRejected(result, gitWrapper.RefAlreadyExistsError).notify(done);
+        });
+    });
+
     describe('push', () => {
         it('should throw RefAlreadyExistsError when git output shows it', done => {
             sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
