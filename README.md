@@ -1,5 +1,5 @@
 # veendor
-A tool for storing your npm dependencies in arbitraty storage
+A tool for storing your npm dependencies in arbitrary storage
 
 ### Features
 Veendor: 
