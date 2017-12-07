@@ -118,6 +118,36 @@ describe('gitWrapper', () => {
 
             assert.isRejected(result, gitWrapper.RefAlreadyExistsError).notify(done);
         });
+
+        it('should throw RefAlreadyExistsError when git responds with cannot lock ref...reference already exists error',
+            done => {
+                sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                    if (executable === 'git' && args[0] === 'push') {
+                        return Promise.reject(new helpers.CommandReturnedNonZeroError(
+                            'Command [git push] returned 1',
+                            'HEAD is now at 7b3abff Initial commit\n' +
+                            'Git LFS: (1 of 1 files) 47.46 MB / 47.46 MB\n' +
+                            'To git@github.com:mutantcornholio/veendor-cache.git\n' +
+                            ' ! [remote rejected]        veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux' +
+                            ' -> veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux (cannot lock ref ' +
+                            '\'refs/tags/veendor-3bc8fa1e3e22364e13220fef900aea2d19699c23-linux-48\': ' +
+                            'reference already exists)\n' +
+                            'error: failed to push some refs to ' +
+                            '\'git@github.yandex-team.ru:market/veendor-cache.git\''
+                        ));
+                    }
+
+                    if (executable === 'git' && args[0] === 'remote') {
+                        return Promise.resolve('origin');
+                    }
+
+                    return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+                });
+
+                const result = gitWrapper.push(process.cwd(), 'veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux');
+
+                assert.isRejected(result, gitWrapper.RefAlreadyExistsError).notify(done);
+            });
         
         it('should throw original generic error from git', done => {
             sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
