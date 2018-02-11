@@ -4,18 +4,17 @@ const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
 const mockfs = require('mock-fs');
 const fsExtra = require('fs-extra');
-const fs = require('fs');
 const path = require('path');
 const _ = require('lodash');
 const tracer = require('tracer');
 
-const install = require('../../lib/install');
-const pkgJson = require('../../lib/pkgjson');
-const gitWrapper = require('../../lib/commandWrappers/gitWrapper');
-const npmWrapper = require('../../lib/commandWrappers/npmWrapper');
-const errors = require('../../lib/errors');
-const logger = require('../../lib/logger');
-const helpers = require('./helpers');
+const install = require('../../../lib/install');
+const pkgJson = require('../../../lib/pkgjson');
+const gitWrapper = require('../../../lib/commandWrappers/gitWrapper');
+const npmWrapper = require('../../../lib/commandWrappers/npmWrapper');
+const errors = require('../../../lib/errors');
+const logger = require('../../../lib/logger');
+const helpers = require('../helpers');
 
 const assert = chai.assert;
 chai.use(chaiAsPromised);
@@ -824,20 +823,7 @@ describe('install', () => {
 
             install({config}).then(checkResult, checkResult);
         });
-
-        it('failing to push on backends without pushMayFail === true should reject install', done => {
-            fakeBackends[0].backend.push = () => Promise.reject(new helpers.AnError());
-
-            assert.isRejected(install({config}), helpers.AnError).notify(done);
-        });
-
-        it('failing to push on backends with pushMayFail === true should be ignored', done => {
-            fakeBackends[0].backend.push = () => Promise.reject(new helpers.AnError());
-            fakeBackends[0].pushMayFail = true;
-
-            assert.isFulfilled(install({config})).notify(done);
-        });
-
+        
         it('failing to push with BundleAlreadyExistsError should call backend.pull once again', done => {
             let turn = 0;
             fakeBackends[0].backend.push = () => Promise.reject(new errors.BundleAlreadyExistsError());
