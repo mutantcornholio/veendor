@@ -1,15 +1,14 @@
-const gitWrapper = require('../../lib/commandWrappers/gitWrapper');
-const helpers = require('../../lib/commandWrappers/helpers');
-const testHelpers = require('./helpers');
-
 const _ = require('lodash');
-
 const chai = require('chai');
-const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
+const chaiAsPromised = require('chai-as-promised');
 
 const assert = chai.assert;
 chai.use(chaiAsPromised);
+
+const gitWrapper = require('../../lib/commandWrappers/gitWrapper');
+const helpers = require('../../lib/commandWrappers/helpers');
+const {notifyAssert, AnError} = require('./helpers');
 
 let config;
 
@@ -34,7 +33,7 @@ describe('gitWrapper', () => {
                 return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
             });
 
-            const result = gitWrapper.olderRevision(process.cwd(), 'test', 5);
+            const result = gitWrapper.olderRevision(process.cwd(), ['test'], 5);
 
             assert.isRejected(result, gitWrapper.TooOldRevisionError).notify(done);
         });
@@ -53,12 +52,38 @@ describe('gitWrapper', () => {
                 return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
             });
 
-            gitWrapper.olderRevision(process.cwd(), 'test', 2);
+            gitWrapper.olderRevision(process.cwd(), ['test'], 2);
         });
 
-        it('should resolve with git show output', done => {
+        it('should resolve with array of git show outputs', done => {
             sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args.some(arg => arg === '--pretty=format:%h')) {
+                    return Promise.resolve('43485c2\n8638279\n');
+                } else if (executable === 'git' && args[1] === 'show' && args[2] === '8638279:foo') {
+                    return Promise.resolve('Foo once was like this.\nCan you imagine?\n');
+                } else if (executable === 'git' && args[1] === 'show' && args[2] === '8638279:bar') {
+                    return Promise.resolve('As a kid, bar looked like this.\n');
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+            });
+
+            const result = gitWrapper.olderRevision(process.cwd(), ['foo', 'bar'], 2);
+            assert.becomes(result, [
+                'Foo once was like this.\nCan you imagine?\n',
+                'As a kid, bar looked like this.\n',
+            ]).notify(done);
+        });
+
+        it('should call git log with all files listed', done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[1] === 'log') {
+                    notifyAssert(() => {
+                        assert.equal(args[4], 'test_file');
+                        assert.equal(args[5], 'also_test_file');
+                        assert.equal(args[6], 'foo_bar');
+                    }, done);
+
                     return Promise.resolve('43485c2\n8638279\n');
                 } else if (executable === 'git' && args[1] === 'show') {
                     return Promise.resolve('this is elder file.\nShow some respect.\n');
@@ -67,8 +92,25 @@ describe('gitWrapper', () => {
                 return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
             });
 
-            const result = gitWrapper.olderRevision(process.cwd(), 'test', 2);
-            assert.becomes(result, 'this is elder file.\nShow some respect.\n').notify(done);
+            gitWrapper.olderRevision(process.cwd(), ['test_file', 'also_test_file', 'foo_bar'], 2);
+        });
+
+        it('should be null-safe for filenames', done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[1] === 'log') {
+                    notifyAssert(() => {
+                        assert.equal(args[4], 'test_file');
+                        assert.equal(args[5], 'foo_bar');
+                    }, done);
+                    return Promise.resolve('43485c2\n8638279\n');
+                } else if (executable === 'git' && args[1] === 'show') {
+                    return Promise.resolve('this is elder file.\nShow some respect.\n');
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+            });
+
+            gitWrapper.olderRevision(process.cwd(), ['test_file', null, 'foo_bar'], 2);
         });
     });
 
@@ -152,7 +194,7 @@ describe('gitWrapper', () => {
         it('should throw original generic error from git', done => {
             sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[0] === 'push') {
-                    return Promise.reject(new testHelpers.AnError('test'));
+                    return Promise.reject(new AnError('test'));
                 }
 
                 if (executable === 'git' && args[0] === 'remote') {
@@ -164,7 +206,7 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.push(process.cwd(), 'veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux');
 
-            assert.isRejected(result, testHelpers.AnError).notify(done);
+            assert.isRejected(result, AnError).notify(done);
         });
     });
 });

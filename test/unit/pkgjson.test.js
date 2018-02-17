@@ -85,7 +85,7 @@ describe('pkgjson', function () {
         });
 
         it('should add lockfile contents to hash', function () {
-            pkgjson.calcHash(PKGJSON_CONTENTS, {lockfileContents: LOCKFILE_CONTENTS});
+            pkgjson.calcHash(PKGJSON_CONTENTS, LOCKFILE_CONTENTS);
 
             const spyCall = fakeSha1.update.getCall(1);
 
@@ -100,13 +100,13 @@ describe('pkgjson', function () {
         });
 
         it('should add string suffixes', () => {
-            const result = pkgjson.calcHash(PKGJSON_CONTENTS, {suffix: 'test'});
+            const result = pkgjson.calcHash(PKGJSON_CONTENTS, null, {suffix: 'test'});
 
             assert.equal(result, FAKE_HASH + '-test');
         });
 
         it('should add function suffixes', () => {
-            const result = pkgjson.calcHash(PKGJSON_CONTENTS, {suffix: () => 'test'});
+            const result = pkgjson.calcHash(PKGJSON_CONTENTS, null, {suffix: () => 'test'});
 
             assert.equal(result, FAKE_HASH + '-test');
         });

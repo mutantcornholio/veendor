@@ -25,7 +25,7 @@ resolveConfig(program.config)
     })
     .then(pkgJson.parsePkgJson)
     .then(parsedPkgJson => {
-        console.log(pkgJson.calcHash(parsedPkgJson, config.packageHash));
+        console.log(pkgJson.calcHash(parsedPkgJson, null, config.packageHash));
 
         if (!(program.debug)) {
             return fsExtra.remove(path.resolve(process.cwd(), '.veendor-debug.log'));

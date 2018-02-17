@@ -124,10 +124,27 @@ describe('install', () => {
     it('should pass config.packageHash to pkgjson', done => {
         config.packageHash = {suffix: 'test'};
         pkgJson.calcHash.restore();
-        const pkgJsonMock = sandbox.mock(pkgJson).expects('calcHash').withArgs(PKGJSON, config.packageHash);
+        const pkgJsonMock = sandbox.mock(pkgJson).expects('calcHash').withArgs(PKGJSON, null, config.packageHash);
         const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
 
         install({config}).then(checkResult, checkResult);
+    });
+
+    it('should pass lockfile to pkgjson', done => {
+        mockfs({
+            'package.json': JSON.stringify(PKGJSON),
+            'package-lock.json': '{watwatwat}',
+        });
+
+        pkgJson.calcHash.restore();
+
+        const pkgJsonMock = sandbox.mock(pkgJson)
+            .expects('calcHash')
+            .withArgs(PKGJSON, '{watwatwat}');
+
+        const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
+
+        install({config, lockfile: 'package-lock.json'}).then(checkResult, checkResult);
     });
 
     it('should call `pull` on all backends until any backend succedes', done => {
@@ -339,11 +356,11 @@ describe('install', () => {
             gitWrapperOlderRevisionStub = sandbox.stub(gitWrapper, 'olderRevision')
                 .callsFake((gitDir, filename, age) => {
                     if (age === 1) {
-                        return Promise.resolve(JSON.stringify(PKGJSON));
+                        return Promise.resolve([JSON.stringify(PKGJSON)]);
                     }else if (age === 2) {
-                        return Promise.resolve(JSON.stringify(fakePkgJson1));
+                        return Promise.resolve([JSON.stringify(fakePkgJson1)]);
                     } else if (age === 3) {
-                        return Promise.resolve(JSON.stringify(fakePkgJson2));
+                        return Promise.resolve([JSON.stringify(fakePkgJson2)]);
                     }
 
                     return Promise.reject(new gitWrapper.TooOldRevisionError);
@@ -370,16 +387,16 @@ describe('install', () => {
             const gitWrapperMock = sandbox.mock(gitWrapper);
 
             gitWrapperMock.expects('olderRevision')
-                .withArgs(process.cwd(), sinon.match('package.json'), 1)
-                .resolves(JSON.stringify(fakePkgJson1));
+                .withArgs(process.cwd(), [sinon.match('package.json')], 1)
+                .resolves([JSON.stringify(fakePkgJson1)]);
 
             gitWrapperMock.expects('olderRevision')
-                .withArgs(process.cwd(), sinon.match('package.json'), 2)
-                .resolves(JSON.stringify(fakePkgJson1));
+                .withArgs(process.cwd(), [sinon.match('package.json')], 2)
+                .resolves([JSON.stringify(fakePkgJson1)]);
 
             gitWrapperMock.expects('olderRevision')
-                .withArgs(process.cwd(), sinon.match('package.json'), 3)
-                .resolves(JSON.stringify(fakePkgJson2));
+                .withArgs(process.cwd(), [sinon.match('package.json')], 3)
+                .resolves([JSON.stringify(fakePkgJson2)]);
 
             config.useGitHistory = {
                 depth: 2
@@ -406,6 +423,68 @@ describe('install', () => {
             config.useGitHistory = {
                 depth: 1
             };
+
+            install({config}).then(checkResult, checkResult);
+        });
+
+        it('should pass options to pkgjson with older package.json revision', done => {
+            pkgJsonStub.restore();
+            const pkgJsonMock = sandbox.mock(pkgJson);
+
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 1
+            };
+
+            config.packageHash = {suffix: 'test'};
+
+            pkgJsonMock
+                .expects('calcHash')
+                .withArgs(PKGJSON, null, config.packageHash)
+                .returns('PKGJSONHash')
+                .atLeast(1);
+            pkgJsonMock
+                .expects('calcHash')
+                .withArgs(fakePkgJson2, null, config.packageHash)
+                .returns('fakePkgJson2Hash')
+                .atLeast(1);
+            pkgJsonMock
+                .expects('calcHash')
+                .withArgs(fakePkgJson1, null, config.packageHash)
+                .returns('fakePkgJson1Hash');
+
+            const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
+
+            install({config}).then(checkResult, checkResult);
+        });
+
+        it('should pass options to pkgjson with older package.json revision', done => {
+            pkgJsonStub.restore();
+            const pkgJsonMock = sandbox.mock(pkgJson);
+
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 1
+            };
+
+            config.packageHash = {suffix: 'test'};
+
+            pkgJsonMock
+                .expects('calcHash')
+                .withArgs(PKGJSON, null, config.packageHash)
+                .returns('PKGJSONHash')
+                .atLeast(1);
+            pkgJsonMock
+                .expects('calcHash')
+                .withArgs(fakePkgJson2, null, config.packageHash)
+                .returns('fakePkgJson2Hash')
+                .atLeast(1);
+            pkgJsonMock
+                .expects('calcHash')
+                .withArgs(fakePkgJson1, null, config.packageHash)
+                .returns('fakePkgJson1Hash');
+
+            const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
 
             install({config}).then(checkResult, checkResult);
         });
@@ -783,8 +862,8 @@ describe('install', () => {
 
             gitWrapper.olderRevision.restore();
             const gitWrapperMock = sandbox.mock(gitWrapper);
-            gitWrapperMock.expects('olderRevision').exactly(3).resolves(JSON.stringify(PKGJSON));
-            gitWrapperMock.expects('olderRevision').once().resolves(JSON.stringify(fakePkgJson2));
+            gitWrapperMock.expects('olderRevision').exactly(3).resolves([JSON.stringify(PKGJSON)]);
+            gitWrapperMock.expects('olderRevision').once().resolves([JSON.stringify(fakePkgJson2)]);
 
             config.backends = [fakeBackends[1]];
             config.useGitHistory = {
