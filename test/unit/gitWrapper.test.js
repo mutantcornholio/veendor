@@ -112,6 +112,26 @@ describe('gitWrapper', () => {
 
             gitWrapper.olderRevision(process.cwd(), ['test_file', null, 'foo_bar'], 2);
         });
+
+        it('should resolve with null for null-filenames', done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[1] === 'log') {
+                    return Promise.resolve('43485c2\n8638279\n');
+                } else if (executable === 'git' && args[1] === 'show') {
+                    if (args[2] === '8638279:test_file') {
+                        return Promise.resolve('elder test_file');
+                    } else if (args[2] === '8638279:foo_bar') {
+                        return Promise.resolve('elder foo_bar');
+                    }
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+            });
+
+            const result = gitWrapper.olderRevision(process.cwd(), ['test_file', null, 'foo_bar'], 2);
+
+            assert.becomes(result, ['elder test_file', null, 'elder foo_bar']).notify(done);
+        });
     });
 
     describe('tag', () => {

@@ -20,6 +20,7 @@ const assert = chai.assert;
 chai.use(chaiAsPromised);
 
 let PKGJSON;
+let LOCKFILE_CONTENTS;
 let fakeSha1;
 let sandbox;
 let fakeBackends;
@@ -44,6 +45,8 @@ describe('install', () => {
                 baz: '6.6.6'
             }
         };
+
+        LOCKFILE_CONTENTS = '{"content": "lockfile contents"}';
 
         mockfs({
             'package.json': JSON.stringify(PKGJSON)
@@ -329,6 +332,11 @@ describe('install', () => {
         let gitWrapperOlderRevisionStub;
         let gitWrapperIsGitRepoStub;
         let npmWrapperStub;
+        let olderLockfiles = [
+            '{"content": "package-lock.json a year ago"}',
+            '{"content": "package-lock.json two years ago"}',
+            '{"content": "package-lock.json three years ago"}',
+        ];
 
         beforeEach(() => {
             mockfs({
@@ -354,13 +362,23 @@ describe('install', () => {
             });
 
             gitWrapperOlderRevisionStub = sandbox.stub(gitWrapper, 'olderRevision')
-                .callsFake((gitDir, filename, age) => {
-                    if (age === 1) {
-                        return Promise.resolve([JSON.stringify(PKGJSON)]);
-                    }else if (age === 2) {
-                        return Promise.resolve([JSON.stringify(fakePkgJson1)]);
-                    } else if (age === 3) {
-                        return Promise.resolve([JSON.stringify(fakePkgJson2)]);
+                .callsFake((gitDir, [filename1, filename2], age) => {
+                    if (filename2 === 'package-lock.json') {
+                        if (age === 1) {
+                            return Promise.resolve([JSON.stringify(PKGJSON), LOCKFILE_CONTENTS]);
+                        } else if (age === 2) {
+                            return Promise.resolve([JSON.stringify(fakePkgJson1), olderLockfiles[0]]);
+                        } else if (age === 3) {
+                            return Promise.resolve([JSON.stringify(fakePkgJson2), olderLockfiles[1]]);
+                        }
+                    } else {
+                        if (age === 1) {
+                            return Promise.resolve([JSON.stringify(PKGJSON), null]);
+                        } else if (age === 2) {
+                            return Promise.resolve([JSON.stringify(fakePkgJson1), null]);
+                        } else if (age === 3) {
+                            return Promise.resolve([JSON.stringify(fakePkgJson2), null]);
+                        }
                     }
 
                     return Promise.reject(new gitWrapper.TooOldRevisionError);
@@ -387,15 +405,15 @@ describe('install', () => {
             const gitWrapperMock = sandbox.mock(gitWrapper);
 
             gitWrapperMock.expects('olderRevision')
-                .withArgs(process.cwd(), [sinon.match('package.json')], 1)
+                .withArgs(process.cwd(), [sinon.match('package.json'), null], 1)
                 .resolves([JSON.stringify(fakePkgJson1)]);
 
             gitWrapperMock.expects('olderRevision')
-                .withArgs(process.cwd(), [sinon.match('package.json')], 2)
+                .withArgs(process.cwd(), [sinon.match('package.json'), null], 2)
                 .resolves([JSON.stringify(fakePkgJson1)]);
 
             gitWrapperMock.expects('olderRevision')
-                .withArgs(process.cwd(), [sinon.match('package.json')], 3)
+                .withArgs(process.cwd(), [sinon.match('package.json'), null], 3)
                 .resolves([JSON.stringify(fakePkgJson2)]);
 
             config.useGitHistory = {
@@ -412,7 +430,6 @@ describe('install', () => {
         it('should call pkgjson with older package.json revision', done => {
             pkgJsonStub.restore();
             const pkgJsonMock = sandbox.mock(pkgJson);
-
             pkgJsonMock.expects('calcHash').withArgs(PKGJSON).returns('PKGJSONHash').atLeast(1);
             pkgJsonMock.expects('calcHash').withArgs(fakePkgJson2).returns('fakePkgJson2Hash').atLeast(1);
             pkgJsonMock.expects('calcHash').withArgs(fakePkgJson1).returns('fakePkgJson1Hash');
@@ -476,17 +493,48 @@ describe('install', () => {
                 .atLeast(1);
             pkgJsonMock
                 .expects('calcHash')
+                .withArgs(fakePkgJson1, null, config.packageHash)
+                .returns('fakePkgJson1Hash');
+            pkgJsonMock
+                .expects('calcHash')
                 .withArgs(fakePkgJson2, null, config.packageHash)
                 .returns('fakePkgJson2Hash')
                 .atLeast(1);
-            pkgJsonMock
-                .expects('calcHash')
-                .withArgs(fakePkgJson1, null, config.packageHash)
-                .returns('fakePkgJson1Hash');
-
             const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
 
             install({config}).then(checkResult, checkResult);
+        });
+
+        it('should pass lockfile to pkgjson with older package.json revision', done => {
+            mockfs({
+                'package.json': JSON.stringify(PKGJSON),
+                'package-lock.json': LOCKFILE_CONTENTS,
+            });
+            pkgJsonStub.restore();
+            const pkgJsonMock = sandbox.mock(pkgJson);
+
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 1
+            };
+
+            pkgJsonMock
+                .expects('calcHash')
+                .withArgs(PKGJSON, LOCKFILE_CONTENTS, config.packageHash)
+                .returns('PKGJSONHash')
+                .atLeast(1);
+            pkgJsonMock
+                .expects('calcHash')
+                .withArgs(fakePkgJson1, olderLockfiles[0], config.packageHash)
+                .returns('fakePkgJson1Hash');
+            pkgJsonMock
+                .expects('calcHash')
+                .withArgs(fakePkgJson2, olderLockfiles[1], config.packageHash)
+                .returns('fakePkgJson2Hash')
+                .atLeast(1);
+            const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
+
+            install({config, lockfile: 'package-lock.json'}).then(checkResult, checkResult);
         });
 
         it('should call `pull` on backends with gitWrapper.olderRevision\'s hash', done => {
