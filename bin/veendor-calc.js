@@ -6,6 +6,7 @@ const fsExtra = require('fs-extra');
 
 const pkgJson = require('../lib/pkgjson');
 const resolveConfig = require('../lib/resolveConfig');
+const resolveLockfile = require('../lib/resolveLockfile');
 const logger = require('../lib/logger');
 
 program
@@ -15,17 +16,33 @@ program
     .parse(process.argv);
 
 let config;
+let lockfileContents;
 
 const daLogger = logger.setDefaultLogger(1, 3);
 
 resolveConfig(program.config)
     .then(resolvedConfig => {
         config = resolvedConfig;
+
+        return resolveLockfile();
+    })
+    .then(resolvedLockfile => {
+        if (resolvedLockfile === null) {
+            lockfileContents = null;
+
+            return;
+        }
+
+        return fsExtra
+            .readFile(path.resolve(process.cwd(), resolvedLockfile))
+            .then(lockfileString => lockfileContents = lockfileString);
+    })
+    .then(() => {
         return fsExtra.readFile(path.resolve(process.cwd(), 'package.json'));
     })
     .then(pkgJson.parsePkgJson)
     .then(parsedPkgJson => {
-        console.log(pkgJson.calcHash(parsedPkgJson, null, config.packageHash));
+        console.log(pkgJson.calcHash(parsedPkgJson, lockfileContents, config.packageHash));
 
         if (!(program.debug)) {
             return fsExtra.remove(path.resolve(process.cwd(), '.veendor-debug.log'));

@@ -17,9 +17,17 @@ rootdir="$(pwd)"
 dirname="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 testcase="$1"
 tmpdir="$2"
+node_version="$3"
+npm_version="$4"
+
+export npm_config_prefix=
+export NVM_DIR="${rootdir}/nvm"
+source "${NVM_DIR}/nvm.sh"
 
 rm -rf "${tmpdir}"
 mkdir -p "${tmpdir}"
+
+nvm use "${node_version}-${npm_version}"
 
 cp "$dirname/testCases/$testcase/package.json" "$tmpdir"
 cp "$dirname/testCases/$testcase/.veendor.js" "$tmpdir"

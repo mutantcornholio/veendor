@@ -6,6 +6,7 @@ const path = require('path');
 
 const install = require('../lib/install');
 const resolveConfig = require('../lib/resolveConfig');
+const resolveLockfile = require('../lib/resolveLockfile');
 const gitWrapper = require('../lib/commandWrappers/gitWrapper');
 const logger = require('../lib/logger');
 
@@ -21,9 +22,16 @@ program
 
 const daLogger = logger.setDefaultLogger(1, 3);
 
+let config;
+
 resolveConfig(program.config)
-    .then(config => {
-        return install({force: program.force, config})
+    .then(resolvedConfig => {
+        config = resolvedConfig;
+
+        return resolveLockfile();
+    })
+    .then(lockfile => {
+        return install({force: program.force, config, lockfile});
     })
     .then(() => {
         if (!(program.debug)) {

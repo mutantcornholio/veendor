@@ -25,6 +25,7 @@ let fakeSha1;
 let sandbox;
 let fakeBackends;
 let config;
+let npmWrapperInstallAllStub;
 
 
 describe('install', () => {
@@ -34,7 +35,7 @@ describe('install', () => {
         fakeBackends = [helpers.fakeBackendConfig('fakeBackends[0]'), helpers.fakeBackendConfig('fakeBackends[1]')];
         fakeBackends[0].backend.pull = () => Promise.reject(new errors.BundleNotFoundError);
 
-        sandbox.stub(npmWrapper, 'installAll').resolves();
+        npmWrapperInstallAllStub = sandbox.stub(npmWrapper, 'installAll').resolves();
 
         PKGJSON = {
             dependencies: {
@@ -143,7 +144,7 @@ describe('install', () => {
 
         const pkgJsonMock = sandbox.mock(pkgJson)
             .expects('calcHash')
-            .withArgs(PKGJSON, '{watwatwat}');
+            .withArgs(PKGJSON, '{watwatwat}').atLeast(1);
 
         const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
 
@@ -331,7 +332,7 @@ describe('install', () => {
         let pkgJsonStub;
         let gitWrapperOlderRevisionStub;
         let gitWrapperIsGitRepoStub;
-        let npmWrapperStub;
+        let npmWrapperInstallStub;
         let olderLockfiles = [
             '{"content": "package-lock.json a year ago"}',
             '{"content": "package-lock.json two years ago"}',
@@ -349,8 +350,12 @@ describe('install', () => {
             fakePkgJson2.dependencies.c = '2.1.8';
 
             pkgJson.calcHash.restore();
-            pkgJsonStub = sandbox.stub(pkgJson, 'calcHash').callsFake(_pkgJson => {
-                if (_.isEqual(_pkgJson, fakePkgJson1)) {
+            pkgJsonStub = sandbox.stub(pkgJson, 'calcHash').callsFake((_pkgJson, lockfileContents) => {
+                if (_.isEqual(_pkgJson, PKGJSON) && lockfileContents === olderLockfiles[0]) {
+                    return 'PKGJSONHash';
+                } else if (_.isEqual(_pkgJson, PKGJSON) && lockfileContents === LOCKFILE_CONTENTS) {
+                    return 'PKGJSONHashWithNewLockfile';
+                } else if (_.isEqual(_pkgJson, fakePkgJson1)) {
                     return 'fakePkgJson1Hash';
                 } else if (_.isEqual(_pkgJson, fakePkgJson2)) {
                     return 'fakePkgJson2Hash';
@@ -386,7 +391,7 @@ describe('install', () => {
 
             gitWrapperIsGitRepoStub = sandbox.stub(gitWrapper, 'isGitRepo').callsFake(() => Promise.resolve());
 
-            npmWrapperStub = sandbox.stub(npmWrapper, 'install').callsFake(() => Promise.resolve());
+            npmWrapperInstallStub = sandbox.stub(npmWrapper, 'install').callsFake(() => Promise.resolve());
 
             fakeBackends[0].push = true;
             fakeBackends[1].backend.pull = (hash) => {
@@ -611,7 +616,7 @@ describe('install', () => {
                 }
             };
 
-            npmWrapperStub.restore();
+            npmWrapperInstallStub.restore();
             const npmWrapperMock = sandbox.mock(npmWrapper);
             npmWrapperMock.expects('install').withArgs({c: '2.2.9'}).resolves();
 
@@ -642,7 +647,7 @@ describe('install', () => {
                 }
             };
 
-            npmWrapperStub.restore();
+            npmWrapperInstallStub.restore();
             const npmWrapperMock = sandbox.mock(npmWrapper);
             npmWrapperMock.expects('uninstall').withArgs(['c']).resolves();
 
@@ -674,7 +679,7 @@ describe('install', () => {
                 }
             };
 
-            npmWrapperStub.restore();
+            npmWrapperInstallStub.restore();
             const npmWrapperMock = sandbox.mock(npmWrapper);
             npmWrapperMock.expects('uninstall').never();
             npmWrapperMock.expects('install').never();
@@ -986,6 +991,34 @@ describe('install', () => {
             };
 
             assert.isRejected(install({config}), errors.BundleAlreadyExistsError).notify(done);
+        });
+
+        it('should re-calc hash after npm install', done => {
+            // because npm install with lockfile will change the lockfile and we need to push with new hash
+            mockfs({
+                'package.json': JSON.stringify(PKGJSON),
+                'package-lock.json': olderLockfiles[0],
+            });
+
+            fakeBackends[1].backend.pull = () => Promise.reject(new errors.BundleNotFoundError);
+            const backendMock0 = sandbox.mock(fakeBackends[0].backend);
+            npmWrapper.installAll.restore();
+
+            sandbox.stub(npmWrapper, 'installAll').callsFake(() => {
+                mockfs({
+                    'package.json': JSON.stringify(PKGJSON),
+                    'package-lock.json': LOCKFILE_CONTENTS,
+                });
+
+                return Promise.resolve();
+            });
+
+
+            backendMock0.expects('push').withArgs('PKGJSONHashWithNewLockfile').resolves();
+
+            const checkResult = checkMockResult.bind(null, [backendMock0], done);
+
+            install({config, lockfile: 'package-lock.json'}).then(checkResult, checkResult);
         });
     });
 });
