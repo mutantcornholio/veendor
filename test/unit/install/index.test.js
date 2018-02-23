@@ -1020,6 +1020,33 @@ describe('install', () => {
 
             install({config, lockfile: 'package-lock.json'}).then(checkResult, checkResult);
         });
+
+        it('should locate lockfile and re-calc hash after npm install', done => {
+            // because npm install with lockfile will change the lockfile and we need to push with new hash
+            mockfs({
+                'package.json': JSON.stringify(PKGJSON),
+            });
+
+            fakeBackends[1].backend.pull = () => Promise.reject(new errors.BundleNotFoundError);
+            const backendMock0 = sandbox.mock(fakeBackends[0].backend);
+            npmWrapper.installAll.restore();
+
+            sandbox.stub(npmWrapper, 'installAll').callsFake(() => {
+                mockfs({
+                    'package.json': JSON.stringify(PKGJSON),
+                    'package-lock.json': LOCKFILE_CONTENTS,
+                });
+
+                return Promise.resolve();
+            });
+
+
+            backendMock0.expects('push').withArgs('PKGJSONHashWithNewLockfile').resolves();
+
+            const checkResult = checkMockResult.bind(null, [backendMock0], done);
+
+            install({config}).then(checkResult, checkResult);
+        });
     });
 });
 

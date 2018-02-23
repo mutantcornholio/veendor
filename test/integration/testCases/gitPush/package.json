@@ -9,6 +9,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "deep-object-diff": "^1.0.4"
+    "deep-object-diff": "1.0.4"
   }
 }

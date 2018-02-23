@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -ex
 
 create_empty_repo () {
     git init --bare "$1"
@@ -22,15 +22,27 @@ npm_version="$4"
 
 export npm_config_prefix=
 export NVM_DIR="${rootdir}/nvm"
-source "${NVM_DIR}/nvm.sh"
+
 
 rm -rf "${tmpdir}"
 mkdir -p "${tmpdir}"
 
+set +x
+source "${NVM_DIR}/nvm.sh"
 nvm use "${node_version}-${npm_version}"
+set -x
 
 cp "$dirname/testCases/$testcase/package.json" "$tmpdir"
 cp "$dirname/testCases/$testcase/.veendor.js" "$tmpdir"
+
+if [[ -f "$dirname/testCases/$testcase/package-lock.json" ]]; then
+    cp "$dirname/testCases/$testcase/package-lock.json" "$tmpdir"
+fi
+
+if [[ -f "$dirname/testCases/$testcase/npm-shrinkwrap.json" ]]; then
+    cp "$dirname/testCases/$testcase/npm-shrinkwrap.json" "$tmpdir"
+fi
+
 cd "$tmpdir"
 
 source "$dirname/testCases/$testcase/testcase.sh"

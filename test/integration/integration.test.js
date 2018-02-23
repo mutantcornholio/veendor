@@ -79,6 +79,10 @@ describe('veendor', function () {
         it('shoud copy archive to local directory', done => {
             runBashTest('localPush', done);
         });
+
+        it('shoud copy archive to local directory when used with lockfile', done => {
+            runBashTest('localPushWithPackageLock', done);
+        });
     });
 
     describe('calc', function () {
@@ -92,7 +96,7 @@ describe('veendor', function () {
             runBashTest('calcHashWithPackageLock', done);
         });
 
-        it.only('shoud return hash on package.json + npm-shrinkwrap.json', done => {
+        it('shoud return hash on package.json + npm-shrinkwrap.json', done => {
             runBashTest('calcHashWithShrinkWrap', done);
         });
 
@@ -124,7 +128,7 @@ function executeBashTest(testCase, remainingVersions) {
         return helpers
             .getOutput(
                 'bash',
-                ['-x', TEST_SCRIPT, testCase, testDir, nodeVersion, npmVersion],
+                [TEST_SCRIPT, testCase, testDir, nodeVersion, npmVersion],
                 {timeoutDuration: 10000}
             ).then(() => {
                 if (remainingVersions.length === 0) {

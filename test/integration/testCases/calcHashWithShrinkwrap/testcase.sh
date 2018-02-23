@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-cp "$dirname/testCases/$testcase/npm-shrinkwrap.json" "$tmpdir"
-
 set -x
 
 expected_hash="68100e26f9ff69d003750813e72fe0ea7b9e50be-test"
