@@ -18,7 +18,7 @@ program
 let config;
 let lockfileContents;
 
-const daLogger = logger.setDefaultLogger(1, 3);
+const daLogger = logger.setDefaultLogger(1, 4);
 
 resolveConfig(program.config)
     .then(resolvedConfig => {

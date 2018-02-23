@@ -88,11 +88,11 @@ describe('veendor', function () {
             runBashTest('calcHashPlain', done);
         });
 
-        xit('shoud return hash on package.json + package-lock.json', done => {
+        it('shoud return hash on package.json + package-lock.json', done => {
             runBashTest('calcHashWithPackageLock', done);
         });
 
-        xit('shoud return hash on package.json + npm-shrinkwrap.json', done => {
+        it.only('shoud return hash on package.json + npm-shrinkwrap.json', done => {
             runBashTest('calcHashWithShrinkWrap', done);
         });
 
