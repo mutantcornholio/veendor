@@ -23,6 +23,110 @@ describe('gitWrapper', () => {
         sandbox.restore();
     });
 
+    describe('.isGitLfsAvailable', () => {
+        it('should reject with GitLfsNotAvailableError if `git lfs` returns non-zero', done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[0] === 'lfs') {
+                    return Promise.reject('\'lfs\' is not a git command.\n');
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+            });
+
+            const result = gitWrapper.isGitLfsAvailable();
+
+            assert.isRejected(result, gitWrapper.GitLfsNotAvailableError).notify(done);
+        });
+
+        it('should reject with GitLfsNotAvailableError if `git config --list` does not contain `filter.lfs.clean`',
+                done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[0] === 'lfs') {
+                    return Promise.resolve('watwat');
+                } else if (executable === 'git' && args[0] === 'config' && args[1] === '--list') {
+                    return Promise.resolve(
+                        'filter.lfs.smudge=git-lfs smudge -- %f\n' +
+                        'filter.lfs.process=git-lfs filter-process\n' +
+                        'filter.lfs.required=true\n' +
+                        'core.repositoryformatversion=0'
+                    );
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+            });
+
+            const result = gitWrapper.isGitLfsAvailable();
+
+            assert.isRejected(result, gitWrapper.GitLfsNotAvailableError).notify(done);
+        });
+
+        it('should reject with GitLfsNotAvailableError if `git config --list` does not contain `filter.lfs.smudge`',
+                done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[0] === 'lfs') {
+                    return Promise.resolve('watwat');
+                } else if (executable === 'git' && args[0] === 'config' && args[1] === '--list') {
+                    return Promise.resolve(
+                        'filter.lfs.clean=git-lfs clean -- %f\n' +
+                        'filter.lfs.process=git-lfs filter-process\n' +
+                        'filter.lfs.required=true\n' +
+                        'core.repositoryformatversion=0'
+                    );
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+            });
+
+            const result = gitWrapper.isGitLfsAvailable();
+
+            assert.isRejected(result, gitWrapper.GitLfsNotAvailableError).notify(done);
+        });
+
+        it('should reject with GitLfsNotAvailableError if `git config --list` does not contain `filter.lfs.process`',
+                done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[0] === 'lfs') {
+                    return Promise.resolve('watwat');
+                } else if (executable === 'git' && args[0] === 'config' && args[1] === '--list') {
+                    return Promise.resolve(
+                        'filter.lfs.clean=git-lfs clean -- %f\n' +
+                        'filter.lfs.smudge=git-lfs smudge -- %f\n' +
+                        'filter.lfs.required=true\n' +
+                        'core.repositoryformatversion=0'
+                    );
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+            });
+
+            const result = gitWrapper.isGitLfsAvailable();
+
+            assert.isRejected(result, gitWrapper.GitLfsNotAvailableError).notify(done);
+        });
+
+        it('should fulfill with true if `git lfs` is in place and git lfs hooks are installed', done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[0] === 'lfs') {
+                    return Promise.resolve('watwat');
+                } else if (executable === 'git' && args[0] === 'config' && args[1] === '--list') {
+                    return Promise.resolve(
+                        'filter.lfs.clean=git-lfs clean -- %f\n' +
+                        'filter.lfs.smudge=git-lfs smudge -- %f\n' +
+                        'filter.lfs.process=git-lfs filter-process\n' +
+                        'filter.lfs.required=true\n' +
+                        'core.repositoryformatversion=0'
+                    );
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+            });
+
+            const result = gitWrapper.isGitLfsAvailable();
+
+            assert.isFulfilled(result, true).notify(done);
+        });
+    });
+
     describe('.olderRevision', () => {
         it('should reject with TooOldRevisionError if file doen\'t have that amount of revisions', done => {
             sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
