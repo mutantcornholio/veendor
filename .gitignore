@@ -39,3 +39,5 @@ jspm_packages
 
 /tmp
 /nvm
+
+package-lock.json

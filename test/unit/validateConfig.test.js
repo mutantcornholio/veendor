@@ -8,15 +8,26 @@ const assert = chai.assert;
 chai.use(chaiAsPromised);
 
 const validateConfig = require('../../lib/validateConfig');
+const npmWrapper = require('../../lib/commandWrappers/npmWrapper');
 const helpers = require('./helpers');
+const veendorVersion = require('../../package.json').version;
 
 let config;
+let sandbox;
 
 describe('validateConfig', function () {
     beforeEach(() => {
         config = {
             backends: [helpers.fakeBackendConfig('first'),helpers.fakeBackendConfig('second')]
         };
+
+        sandbox = sinon.sandbox.create();
+
+        global.VEENDOR_VERSION = veendorVersion;
+    });
+
+    afterEach(() => {
+        sandbox.restore();
     });
 
     it('should reject with EmptyBackendsPropertyError if config does not contain \'backends\' section', done => {
@@ -115,7 +126,7 @@ describe('validateConfig', function () {
         assert.isRejected(validateConfig(config), validateConfig.AliasesNotUniqueError).notify(done);
     });
 
-    it('should call backend\'s validateOptions function', () => {
+    it('should call backend\'s validateOptions function', done => {
         const backend0Mock = sinon.mock(config.backends[0].backend)
             .expects('validateOptions')
             .withArgs(sinon.match.same(config.backends[0].options));
@@ -138,7 +149,7 @@ describe('validateConfig', function () {
         assert.isRejected(validateConfig(config), helpers.AnError).notify(done);
     });
 
-    it('sets fallbackToNpm to true', () => {
+    it('sets fallbackToNpm to true', done => {
         const checkResult = () => helpers.notifyAssert(() => {
             assert(config.fallbackToNpm === true);
         }, done);
@@ -146,7 +157,7 @@ describe('validateConfig', function () {
         validateConfig(config).then(checkResult, checkResult);
     });
 
-    it('sets installDiff to true', () => {
+    it('sets installDiff to true', done => {
         const checkResult = () => helpers.notifyAssert(() => {
             assert(config.installDiff === true);
         }, done);
@@ -177,7 +188,6 @@ describe('validateConfig', function () {
 
     it('should throw error if useGitHistory.depth is zero or below zero', done => {
         helpers.notifyAssert(() => {
-
             config.useGitHistory = {depth: 0};
 
             assert.isRejected(validateConfig(config), validateConfig.InvalidUseGitHistoryError);
@@ -197,5 +207,35 @@ describe('validateConfig', function () {
         });
 
         done();
+    });
+
+    it('should throw InvalidNpmVersionError if npmVersion returns incompatible version', done => {
+        sandbox.stub(npmWrapper, 'version').returns(Promise.resolve('5.4.3'));
+
+        config.npmVersion = '>6.6.6';
+
+        assert.isRejected(validateConfig(config), validateConfig.InvalidNpmVersionError).notify(done);
+    });
+
+    it('should resolve, if npm version check passes', done => {
+        sandbox.stub(npmWrapper, 'version').returns(Promise.resolve('5.4.3'));
+
+        config.npmVersion = '5.x.x';
+
+        assert.isFulfilled(validateConfig(config)).notify(done);
+    });
+
+    it('should throw InvalidVeendorVersionError if veendor does not comply with veendorVersion constraint', done => {
+        global.VEENDOR_VERSION = '2.0.0';
+        config.veendorVersion = '>2.1.0';
+
+        assert.isRejected(validateConfig(config), validateConfig.InvalidVeendorVersionError).notify(done);
+    });
+
+    it('should resolve, if veendor version is compatible', done => {
+        global.VEENDOR_VERSION = '2.0.0';
+        config.veendorVersion = '^2';
+
+        assert.isFulfilled(validateConfig(config)).notify(done);
     });
 });

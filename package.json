@@ -26,6 +26,7 @@
     "deep-object-diff": "^1.0.4",
     "fs-extra": "^4.0.0",
     "lodash": "^4.14.1",
+    "semver": "^5.5.0",
     "tracer": "^0.8.9"
   },
   "devDependencies": {
