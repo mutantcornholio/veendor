@@ -105,6 +105,30 @@ useGitHistory: {
 }
 ```
 
+#### npmVersion
+Optional.  
+Semver constraint on npm. Veendor will crash if npm version is incompatible.  
+Example:
+```js
+npmVersion: '^5'
+```
+
+#### veendorVersion
+Optional.  
+Semver constraint on veendor itself.  
+Use it if you want to force your team to update veendor and prohibit pushing of bundles created by older versions of veendor.  
+Example:  
+```js
+veendorVersion: '>=2.1'
+```
+
+Please notice that `veendorVersion` option is not supported in veendor before 2.0, so if your team might use 1.x, add this to your .veendor.js:
+```js
+if (!global.VEENDOR_VERSION) {
+    throw new Error('veendor version is incompatible, please update');
+}
+```
+
 ### Built-in backends
 #### git-lfs
 Stores bundles in git repo.  
