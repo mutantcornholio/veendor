@@ -13,6 +13,7 @@ Veendor:
 ### How it works
 It calculates SHA-1 of `dependencies` and `devDependencies` in your `package.json`,
 then searches for that hash in `backends` (cache providers).  
+If you commit your `package-lock.json` or `npm-shrinkwrap.json`, it contents will be hashed too.  
 If found, veendor downloads archive and unpacks your `node_modules`. Voila!  
 If not, veendor looks at previous revisions of your `package.json` and
 tries to find older bundles, then installs only deps that have changed.  
