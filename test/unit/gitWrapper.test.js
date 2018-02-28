@@ -1,5 +1,6 @@
 const _ = require('lodash');
 const chai = require('chai');
+const path = require('path');
 const sinon = require('sinon');
 const chaiAsPromised = require('chai-as-promised');
 
@@ -147,9 +148,10 @@ describe('gitWrapper', () => {
                 if (executable === 'git' && args.some(arg => arg === '--pretty=format:%h')) {
                     return Promise.resolve('43485c2\n8638279\n');
                 } else if (executable === 'git' && args[1] === 'show') {
-                    assert.equal(args[2], '8638279:test');
+                    notifyAssert(() => {
+                        assert.equal(args[2], '8638279:test');
+                    }, done);
 
-                    done();
                     return Promise.resolve('ok');
                 }
 
@@ -157,6 +159,24 @@ describe('gitWrapper', () => {
             });
 
             gitWrapper.olderRevision(process.cwd(), ['test'], 2);
+        });
+
+        it('should call git show with relative filename', done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args.some(arg => arg === '--pretty=format:%h')) {
+                    return Promise.resolve('43485c2\n8638279\n');
+                } else if (executable === 'git' && args[1] === 'show') {
+                    notifyAssert(() => {
+                        assert.equal(args[2], '8638279:test');
+                    }, done);
+
+                    return Promise.resolve('ok');
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
+            });
+
+            gitWrapper.olderRevision(process.cwd(), [path.join(process.cwd(), 'test')], 2);
         });
 
         it('should resolve with array of git show outputs', done => {
