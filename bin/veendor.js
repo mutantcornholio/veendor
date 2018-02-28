@@ -2,8 +2,6 @@
 const program = require('commander');
 const version = require('../package.json').version;
 
-global.VEENDOR_VERSION = version;
-
 program
     .version(version)
     .description('A tool for vendoring your npm dependencies')
