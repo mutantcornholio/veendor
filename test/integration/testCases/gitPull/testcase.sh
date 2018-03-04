@@ -7,11 +7,11 @@ export TEST_REPO_DIR="$(pwd)/repo"
 
 git clone "$(pwd)/repo" repolocal
 cd repolocal
-cp "$rootdir/test/integration/bundles/29421e2947d74266c32bb6512faf066e42241702.tar.gz" .
-git add 29421e2947d74266c32bb6512faf066e42241702.tar.gz
-git commit -m "29421e2947d74266c32bb6512faf066e42241702.tar.gz"
-git tag veendor-29421e2947d74266c32bb6512faf066e42241702
-git push origin veendor-29421e2947d74266c32bb6512faf066e42241702
+cp "$rootdir/test/integration/bundles/7d0db335c82dfd9aa2b96dabc485b89ebaa1496f.tar.gz" .
+git add 7d0db335c82dfd9aa2b96dabc485b89ebaa1496f.tar.gz
+git commit -m "7d0db335c82dfd9aa2b96dabc485b89ebaa1496f.tar.gz"
+git tag veendor-7d0db335c82dfd9aa2b96dabc485b89ebaa1496f
+git push origin veendor-7d0db335c82dfd9aa2b96dabc485b89ebaa1496f
 cd -
 rm -rf repolocal
 

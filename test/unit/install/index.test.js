@@ -20,7 +20,7 @@ const assert = chai.assert;
 chai.use(chaiAsPromised);
 
 let PKGJSON;
-let LOCKFILE_CONTENTS;
+let LOCKFILE;
 let fakeSha1;
 let sandbox;
 let fakeBackends;
@@ -47,7 +47,18 @@ describe('install', () => {
             }
         };
 
-        LOCKFILE_CONTENTS = '{"content": "lockfile contents"}';
+        LOCKFILE = {
+            name: 'wat',
+            dependencies: {
+                a: {version: '666'},
+                b: {version: '^228'},
+                c: {version: '1.4.88'},
+                d: {version: '^0.0.1'},
+            },
+            otherField: {
+                field: 'value',
+            }
+        };
 
         mockfs({
             'package.json': JSON.stringify(PKGJSON)
@@ -137,14 +148,14 @@ describe('install', () => {
     it('should pass lockfile to pkgjson', done => {
         mockfs({
             'package.json': JSON.stringify(PKGJSON),
-            'package-lock.json': '{watwatwat}',
+            'package-lock.json': '{"watwatwat": "wat"}',
         });
 
         pkgJson.calcHash.restore();
 
         const pkgJsonMock = sandbox.mock(pkgJson)
             .expects('calcHash')
-            .withArgs(PKGJSON, '{watwatwat}').atLeast(1);
+            .withArgs(PKGJSON, {watwatwat: 'wat'}).atLeast(1);
 
         const checkResult = checkMockResult.bind(null, [pkgJsonMock], done);
 
@@ -334,9 +345,9 @@ describe('install', () => {
         let gitWrapperIsGitRepoStub;
         let npmWrapperInstallStub;
         let olderLockfiles = [
-            '{"content": "package-lock.json a year ago"}',
-            '{"content": "package-lock.json two years ago"}',
-            '{"content": "package-lock.json three years ago"}',
+            {content: 'package-lock.json a year ago'},
+            {content: 'package-lock.json two years ago'},
+            {content: 'package-lock.json three years ago'},
         ];
 
         beforeEach(() => {
@@ -351,9 +362,9 @@ describe('install', () => {
 
             pkgJson.calcHash.restore();
             pkgJsonStub = sandbox.stub(pkgJson, 'calcHash').callsFake((_pkgJson, lockfileContents) => {
-                if (_.isEqual(_pkgJson, PKGJSON) && lockfileContents === olderLockfiles[0]) {
+                if (_.isEqual(_pkgJson, PKGJSON) && _.isEqual(lockfileContents, olderLockfiles[0])) {
                     return 'PKGJSONHash';
-                } else if (_.isEqual(_pkgJson, PKGJSON) && lockfileContents === LOCKFILE_CONTENTS) {
+                } else if (_.isEqual(_pkgJson, PKGJSON) && _.isEqual(lockfileContents, LOCKFILE)) {
                     return 'PKGJSONHashWithNewLockfile';
                 } else if (_.isEqual(_pkgJson, fakePkgJson1)) {
                     return 'fakePkgJson1Hash';
@@ -370,11 +381,11 @@ describe('install', () => {
                 .callsFake((gitDir, [filename1, filename2], age) => {
                     if (filename2 === 'package-lock.json') {
                         if (age === 1) {
-                            return Promise.resolve([JSON.stringify(PKGJSON), LOCKFILE_CONTENTS]);
+                            return Promise.resolve([JSON.stringify(PKGJSON), JSON.stringify(LOCKFILE)]);
                         } else if (age === 2) {
-                            return Promise.resolve([JSON.stringify(fakePkgJson1), olderLockfiles[0]]);
+                            return Promise.resolve([JSON.stringify(fakePkgJson1), JSON.stringify(olderLockfiles[0])]);
                         } else if (age === 3) {
-                            return Promise.resolve([JSON.stringify(fakePkgJson2), olderLockfiles[1]]);
+                            return Promise.resolve([JSON.stringify(fakePkgJson2), JSON.stringify(olderLockfiles[1])]);
                         }
                     } else {
                         if (age === 1) {
@@ -513,7 +524,7 @@ describe('install', () => {
         it('should pass lockfile to pkgjson with older package.json revision', done => {
             mockfs({
                 'package.json': JSON.stringify(PKGJSON),
-                'package-lock.json': LOCKFILE_CONTENTS,
+                'package-lock.json': JSON.stringify(LOCKFILE),
             });
             pkgJsonStub.restore();
             const pkgJsonMock = sandbox.mock(pkgJson);
@@ -525,7 +536,7 @@ describe('install', () => {
 
             pkgJsonMock
                 .expects('calcHash')
-                .withArgs(PKGJSON, LOCKFILE_CONTENTS, config.packageHash)
+                .withArgs(PKGJSON, LOCKFILE, config.packageHash)
                 .returns('PKGJSONHash')
                 .atLeast(1);
             pkgJsonMock
@@ -925,7 +936,7 @@ describe('install', () => {
 
             const checkResult = checkMockResult.bind(null, [gitWrapperMock], done);
 
-            install({config}).then(checkResult, checkResult);
+            install({config}).then(checkResult, error=> {console.log('\n\n\n', error, '\n\n\n');checkResult()});
         });
 
         it('should not pull backends if hash hasn\'t changed ' +
@@ -997,7 +1008,7 @@ describe('install', () => {
             // because npm install with lockfile will change the lockfile and we need to push with new hash
             mockfs({
                 'package.json': JSON.stringify(PKGJSON),
-                'package-lock.json': olderLockfiles[0],
+                'package-lock.json': JSON.stringify(olderLockfiles[0]),
             });
 
             fakeBackends[1].backend.pull = () => Promise.reject(new errors.BundleNotFoundError);
@@ -1007,7 +1018,7 @@ describe('install', () => {
             sandbox.stub(npmWrapper, 'installAll').callsFake(() => {
                 mockfs({
                     'package.json': JSON.stringify(PKGJSON),
-                    'package-lock.json': LOCKFILE_CONTENTS,
+                    'package-lock.json': JSON.stringify(LOCKFILE),
                 });
 
                 return Promise.resolve();
@@ -1034,7 +1045,7 @@ describe('install', () => {
             sandbox.stub(npmWrapper, 'installAll').callsFake(() => {
                 mockfs({
                     'package.json': JSON.stringify(PKGJSON),
-                    'package-lock.json': LOCKFILE_CONTENTS,
+                    'package-lock.json': JSON.stringify(LOCKFILE),
                 });
 
                 return Promise.resolve();

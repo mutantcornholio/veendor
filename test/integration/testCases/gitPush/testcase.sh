@@ -13,11 +13,11 @@ cd repolocal
 npm_ver="$(npm --version)"
 
 if [[ "$npm_ver" == 3* ]] ||  [[ "$npm_ver" == 4* ]]; then
-    git checkout veendor-29421e2947d74266c32bb6512faf066e42241702
-    tar -xf 29421e2947d74266c32bb6512faf066e42241702.tar.gz
+    git checkout veendor-7d0db335c82dfd9aa2b96dabc485b89ebaa1496f
+    tar -xf 7d0db335c82dfd9aa2b96dabc485b89ebaa1496f.tar.gz
 else
-    git checkout veendor-4e2e02f6b3001ddd45758f930a05f838eff60431
-    tar -xf 4e2e02f6b3001ddd45758f930a05f838eff60431.tar.gz # package-lock.json is created during the run
+    git checkout veendor-1722dc5c5ee28cf0bcdc5ac1da82e0608b655f88
+    tar -xf 1722dc5c5ee28cf0bcdc5ac1da82e0608b655f88.tar.gz # package-lock.json is created during the run
                                                             # veendor should recalculate hash and push new one
 fi
 

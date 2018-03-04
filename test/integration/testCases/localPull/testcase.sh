@@ -3,7 +3,7 @@
 mkdir "$(pwd)/local"
 export TEST_DIR="$(pwd)/local"
 
-cp "$rootdir/test/integration/bundles/29421e2947d74266c32bb6512faf066e42241702.tar.gz" local/
+cp "$rootdir/test/integration/bundles/7d0db335c82dfd9aa2b96dabc485b89ebaa1496f.tar.gz" local/
 
 node "$rootdir/bin/veendor.js" install --debug
 
