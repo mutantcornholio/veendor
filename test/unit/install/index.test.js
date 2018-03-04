@@ -1040,8 +1040,8 @@ describe('install', () => {
 
             fakeBackends[1].backend.pull = () => Promise.reject(new errors.BundleNotFoundError);
             const backendMock0 = sandbox.mock(fakeBackends[0].backend);
-            npmWrapper.installAll.restore();
 
+            npmWrapper.installAll.restore();
             sandbox.stub(npmWrapper, 'installAll').callsFake(() => {
                 mockfs({
                     'package.json': JSON.stringify(PKGJSON),
@@ -1051,8 +1051,34 @@ describe('install', () => {
                 return Promise.resolve();
             });
 
-
             backendMock0.expects('push').withArgs('PKGJSONHashWithNewLockfile').resolves();
+
+            const checkResult = checkMockResult.bind(null, [backendMock0], done);
+
+            install({config}).then(checkResult, checkResult);
+        });
+
+        it('re-pulling should work after hash recalculation', done => {
+            const backendMock0 = sandbox.mock(fakeBackends[0].backend);
+
+            backendMock0.expects('pull').withArgs('PKGJSONHash').rejects(new errors.BundleNotFoundError);
+            fakeBackends[1].backend.pull = () => Promise.reject(new errors.BundleNotFoundError);
+
+            backendMock0.expects('push')
+                .withArgs('PKGJSONHashWithNewLockfile')
+                .rejects(new errors.BundleAlreadyExistsError);
+
+            backendMock0.expects('pull').withArgs('PKGJSONHashWithNewLockfile').resolves();
+
+            npmWrapper.installAll.restore();
+            sandbox.stub(npmWrapper, 'installAll').callsFake(() => {
+                mockfs({
+                    'package.json': JSON.stringify(PKGJSON),
+                    'package-lock.json': JSON.stringify(LOCKFILE),
+                });
+
+                return Promise.resolve();
+            });
 
             const checkResult = checkMockResult.bind(null, [backendMock0], done);
 
