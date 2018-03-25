@@ -33,8 +33,6 @@ const NODE_VERSIONS = [{
 describe('veendor', function () {
     before(function (done) {
         this.timeout(120000);
-        logger.setLogger(tracer.console({level: 6}));
-
         const nvmDir = path.resolve(process.cwd(), 'test', 'integration', 'nvm');
 
         const resultArgs = ['-x', PREPARE_NVM_SCRIPT];
@@ -46,7 +44,7 @@ describe('veendor', function () {
             }
         }
 
-        return helpers
+        helpers
             .getOutput('bash', resultArgs, {timeoutDuration: 120000})
             .then(() => {
                 done();
@@ -82,6 +80,10 @@ describe('veendor', function () {
 
         it('shoud copy archive to local directory when used with lockfile', done => {
             runBashTest('localPushWithPackageLock', done);
+        });
+
+        it('shoud pull node_modules from http server', done => {
+            runBashTest('httpPull', done);
         });
     });
 

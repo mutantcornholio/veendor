@@ -31,8 +31,6 @@ describe('pushBackends', function () {
             installDiff: true,
             packageHash: {}
         };
-
-        logger.setLogger(tracer.console({level: 6}));
     });
 
     afterEach(function () {

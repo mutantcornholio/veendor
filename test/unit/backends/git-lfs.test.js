@@ -13,7 +13,7 @@ const gitWrapper = require('../../../lib/commandWrappers/gitWrapper');
 const tarWrapper = require('../../../lib/commandWrappers/tarWrapper');
 const errors = require('../../../lib/errors');
 
-const {notifyAssert} = require('../helpers');
+const {notifyAssert, expectCalls} = require('../helpers');
 
 let fakeRepo;
 let sandbox;
@@ -353,15 +353,3 @@ describe('git-lfs', () => {
         })
     })
 });
-
-function expectCalls(expectPairs, done) {
-    for (const expect of expectPairs) {
-        if (!expect.spy.calledWith(...expect.args)) {
-            return done(new Error(`Expected spy "${expect.spy.displayName}" ` +
-                `to be called with [${expect.args.join(', ')}]\n` +
-                `Actual calls were: [${expect.spy.getCalls().join(', ')}]`))
-        }
-    }
-
-    done();
-}
