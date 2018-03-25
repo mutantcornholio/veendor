@@ -180,8 +180,6 @@ describe('install', () => {
     });
 
     it('should stop calling `pull` if backend fails with generic error', done => {
-
-
         mockfs({
             'package.json': JSON.stringify(PKGJSON)
         });
@@ -1002,6 +1000,30 @@ describe('install', () => {
             };
 
             assert.isRejected(install({config}), errors.BundleAlreadyExistsError).notify(done);
+        });
+
+        it('re-pulling should be done with same bundle id, that original pull were', done => {
+            // real life case: can't find bundles, run npm install, it changes package-lock,
+            // another bundle is trying to be pulled, nothing's found, npm install, push, BundleAlreadyExistsError
+            let turn = 0;
+            fakeBackends[0].backend.push = () => {
+                mockfs({
+                    'package.json': JSON.stringify(fakePkgJson1)
+                });
+
+                return Promise.reject(new errors.BundleAlreadyExistsError())
+            };
+
+            const backendMock0 = sandbox.mock(fakeBackends[0].backend);
+
+            backendMock0
+                .expects('pull')
+                .withArgs('PKGJSONHash').exactly(1).rejects(new errors.BundleNotFoundError)
+                .withArgs('PKGJSONHash').exactly(1).resolves();
+
+            const checkResult = checkMockResult.bind(null, [backendMock0], done);
+
+            install({config}).then(checkResult, checkResult);
         });
     });
 });
