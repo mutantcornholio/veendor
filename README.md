@@ -43,12 +43,12 @@ Bundles search/upload will be in order defined here.
 Each object has this format: 
 ```js
 {
-    alias: 'some_name', // required, choose any name you like
-    backend: 'local', // string or module. See built-in backends and backend API sections 
-    push: true, // optional, defaults to `false`. Should bundles be pushed to this backend
-    pushMayFail: true // optional, defaults to `false`.
-                      // `veendor install` won't fail if push to backend fails
-    options: {} // backend-specific options
+    alias: 'some_name', // Required, choose any name you like.
+    backend: 'local', // String or module. See built-in backends and backend API sections.
+    push: true, // Optional, defaults to `false`. Should bundles be pushed to this backend.
+    pushMayFail: true // Optional, defaults to `false`.
+                      // `veendor install` won't fail if push to backend fails.
+    options: {} // Backend-specific options.
 }
 ```
 
@@ -131,16 +131,59 @@ if (!global.VEENDOR_VERSION) {
 ```
 
 ### Built-in backends
+#### http
+Read-only HTTP backend.  
+Designed for anonymous access; you should upload your bundles some other way;  
+Accepts these options: 
+```js
+{
+    resolveUrl: hash => {  // Required. Function for getting remote url for given hash.
+                           // Returns string or Promise<string>.
+        return `https://someserver.org/${hash}.tar.gz`;
+    }, 
+                                                                 
+    compression: 'xz', // Optional, defaults to 'gzip'. Also supports 'bzip2', 'xz'.
+    strict: true // Optional, defaults to false. 
+                 // If true, all codes other than 404 and 200 will abort installation.
+}
+```
+
+#### s3
+Stores bundles in Amazon S3 bucket.  
+
+Accepts these options: 
+```js
+{
+    bucket: 'veendor', // Required, name of S3 bucket. Bucket should already exist.
+    s3Options: { // Optional, options for AWS-SDK (see below)
+        endpoint: 'localhost:14569'
+    },
+    objectAcl: 'authenticated-read', // Optional, defaults to your bucket settings. 
+                                     // ACL for created objects. See below. 
+    compression: 'xz', // Optional, defaults to 'gzip'. Also supports 'bzip2', 'xz'.
+}
+```
+
+veendor uses [aws-sdk](https://www.npmjs.com/package/aws-sdk) for s3 backend.  
+`s3Options` is [AWS.Config](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Config.html#constructor-property)
+options hash, and may contain all of listed options.  
+`objectAcl` is `ACL` parameter passed to `S3.upload()`.
+Check [the docs](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#upload-property).  
+
+You can use any of [these](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/setting-credentials-node.html)
+methods to set your credentials.  
+Also, you can directly pass `accessKeyId` and `secretAccessKey` params to `s3Options`.  
+
 #### git-lfs
 Stores bundles in git repo.  
 Accepts these options: 
 ```js
 {
-    repo: 'git@github.com:you/your-vendors.git', // required. Git remote.
-    compression: 'xz', // optional, defaults to 'gzip'. Also supports 'bzip2', 'xz'.
-    defaultBranch: 'braanch', // deafult branch of your repo. Defaults to 'master'
-    checkLfsAvailability: true // prevent veendor from running if git-lfs is not installed. 
-                               // optional, defaults to `false`. 
+    repo: 'git@github.com:you/your-vendors.git', // Required. Git remote.
+    compression: 'xz', // Optional, defaults to 'gzip'. Also supports 'bzip2', 'xz'.
+    defaultBranch: 'braanch', // Default branch of your repo. Defaults to 'master'.
+    checkLfsAvailability: true // Prevent veendor from running if git-lfs is not installed. 
+                               // Optional, defaults to `false`. 
 }
 ```
 Note: while supporting git-lfs is not mandatory for your remote,
@@ -157,8 +200,8 @@ Stores bundles in local directory
 Accepts these options: 
 ```js
 {
-    directory: '/var/cache/veendor', // required. Directory to store bundles in.
-    compression: 'xz' // optional, defaults to 'gzip'. Also supports 'bzip2', 'xz'.
+    directory: '/var/cache/veendor', // Required. Directory to store bundles in.
+    compression: 'xz' // Optional, defaults to 'gzip'. Also supports 'bzip2', 'xz'.
 }
 ```
 
