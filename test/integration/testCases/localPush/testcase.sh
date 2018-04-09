@@ -7,8 +7,6 @@ echo -e "\nRUNNING TEST\n"
 
 node "$rootdir/bin/veendor.js" install --debug
 
-npm_ver="$(npm --version)"
-
 cd "$(pwd)/local"
 tar -xf 7d0db335c82dfd9aa2b96dabc485b89ebaa1496f.tar.gz
 

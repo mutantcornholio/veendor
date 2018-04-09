@@ -4,9 +4,7 @@ const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
 const mockfs = require('mock-fs');
 const nock = require('nock');
-const path = require('path');
 const fsExtra = require('fs-extra');
-const stream = require('stream');
 
 const assert = chai.assert;
 chai.use(chaiAsPromised);
@@ -14,13 +12,12 @@ chai.use(chaiAsPromised);
 const httpBackend = require('../../../lib/backends/http');
 const tarWrapper = require('../../../lib/commandWrappers/tarWrapper');
 const errors = require('../../../lib/errors');
-const {checkMockResult, checkNock, expectCalls} = require('../helpers');
+const {checkMockResult, checkNock, expectCalls, FailingStream} = require('../helpers');
 
 let sandbox;
 let fakeHash;
 let defaultOptions;
 let mockfsConfig;
-let realBundleStream;
 
 
 describe('http backend', () => {
@@ -45,6 +42,10 @@ describe('http backend', () => {
             strict: false,
         };
 
+        if (!nock.isActive()) {
+            nock.activate();
+        }
+
         nock.disableNetConnect();
     });
 
@@ -52,7 +53,6 @@ describe('http backend', () => {
         mockfs.restore();
         sandbox.restore();
         nock.restore();
-        nock.activate();
     });
 
     describe('pull', () => {
@@ -116,7 +116,7 @@ describe('http backend', () => {
         });
 
         it('should download file to temp directory', done => {
-            const scope = nock('http://testhost.wat')
+            nock('http://testhost.wat')
                 .get(`/${fakeHash}.tar.gz`)
                 .reply(200, 'wertyuiopasdfghj', {'Content-Type': 'application/x-gzip'});
 
@@ -192,8 +192,6 @@ describe('http backend', () => {
                 args: [sinon.match(`.veendor/http/${fakeHash}.tar.gz`)]
             }], done);
 
-            // const checkResult = checkMockResult([tarWrapperMock], done);
-
             httpBackend.pull(fakeHash, defaultOptions, '.veendor/http').then(checkResult, checkResult);
         });
     });
@@ -231,21 +229,3 @@ describe('http backend', () => {
         });
     });
 });
-
-class FailingStream extends stream.Readable {
-    constructor() {
-        super();
-        this.turn = 0;
-    }
-    _read() {
-        if (this.turn < 5) {
-            this.turn++;
-            setImmediate(() => {
-                this.push('wertyuiopasdfghjk');
-            });
-        } else {
-            this.emit('error', new Error('read error'));
-            this.push(null);
-        }
-    }
-}

@@ -13,6 +13,14 @@ module.exports = {
             }
         },
         {
+            alias: 's3',
+            push: true,
+            backend: 's3',
+            options: {
+                bucket: 'mcornholio-s3',
+            }
+        },
+        {
             alias: 'github',
             push: true,
             backend: 'git-lfs',

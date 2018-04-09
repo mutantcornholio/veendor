@@ -6,12 +6,11 @@ const chaiAsPromised = require('chai-as-promised');
 const fsExtra = require('fs-extra');
 const _ = require('lodash');
 const path = require('path');
-const tracer = require('tracer');
+const AWS = require('aws-sdk');
+const S3rver = require('s3rver');
 
 const helpers = require('../../lib/commandWrappers/helpers');
-const logger = require('../../lib/logger');
 
-const assert = chai.assert;
 chai.use(chaiAsPromised);
 
 /**
@@ -21,6 +20,7 @@ chai.use(chaiAsPromised);
 
 const TEST_SCRIPT = 'test/integration/runTest.sh';
 const PREPARE_NVM_SCRIPT = 'test/integration/prepareNvm.sh';
+const s3Dir = path.resolve(process.cwd(), 'tmp', 'test', 'integration', 's3rver');
 
 const NODE_VERSIONS = [{
     nodeVersion: 'v6.13.0',
@@ -30,10 +30,13 @@ const NODE_VERSIONS = [{
     npmVersions: ['v5.6.0']
 },];
 
+let s3rverInstance;
+let s3Client;
+
 describe('veendor', function () {
     before(function (done) {
         this.timeout(120000);
-        const nvmDir = path.resolve(process.cwd(), 'test', 'integration', 'nvm');
+        const nvmDir = path.resolve(process.cwd(), 'nvm');
 
         const resultArgs = ['-x', PREPARE_NVM_SCRIPT];
 
@@ -59,8 +62,42 @@ describe('veendor', function () {
             });
     });
 
+    before(function (done) {
+        this.timeout(15000);
+
+        fsExtra.ensureDirSync(s3Dir);
+
+        s3rverInstance = new S3rver({
+            port: 14569,
+            silent: true,
+            directory: s3Dir,
+        }).run(err => {
+            if(err) {
+                return done(err);
+            }
+
+            s3Client = new AWS.S3({
+                endpoint: `http://localhost:14569`,
+                accessKeyId: "123",
+                secretAccessKey: "abc",
+                sslEnabled: false,
+                s3ForcePathStyle: true,
+            });
+
+            done();
+        });
+    });
+
+    after(done => {
+        s3rverInstance.close(done);
+    });
+
     describe('install', function () {
         this.timeout(40000);
+
+        beforeEach(() => {
+            return fsExtra.emptyDir(path.join(s3Dir, 'testbucket'));
+        });
 
         it('shoud pull node_modules from git repo', done => {
             runBashTest('gitPull', done);
@@ -84,6 +121,14 @@ describe('veendor', function () {
 
         it('shoud pull node_modules from http server', done => {
             runBashTest('httpPull', done);
+        });
+
+        it('shoud pull node_modules from s3 server', done => {
+            runBashTest('s3Pull', done);
+        });
+
+        it('shoud push node_modules to s3 server', done => {
+            runBashTest('s3Push', done);
         });
     });
 
