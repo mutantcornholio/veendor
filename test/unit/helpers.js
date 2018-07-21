@@ -1,5 +1,7 @@
 'use strict';
 
+const fsExtra = require('fs-extra');
+const path = require('path');
 const stream = require('stream');
 
 function fakeBackendConfig(alias) {
@@ -7,11 +9,19 @@ function fakeBackendConfig(alias) {
         alias,
         options: {},
         backend: {
-            pull: () => Promise.resolve(),
+            pull: () => createNodeModules(),
             push: () => Promise.resolve(),
             validateOptions: () => {},
         }
     }
+}
+
+function createNodeModules() {
+    return fsExtra.ensureDir(path.join(process.cwd(), 'node_modules'))
+        .then(() => fsExtra.writeFile(
+            path.join(process.cwd(), 'node_modules', 'foobar'),
+            'deadbeef'
+        ));
 }
 
 function notifyAssert(assertion, done) {
@@ -121,6 +131,7 @@ class DevNullStream extends stream.Writable {
 
 module.exports = {
     fakeBackendConfig,
+    createNodeModules,
     notifyAssert,
     AnError,
     AWSError,
