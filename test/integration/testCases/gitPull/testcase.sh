@@ -15,7 +15,7 @@ git push origin veendor-7d0db335c82dfd9aa2b96dabc485b89ebaa1496f
 cd -
 rm -rf repolocal
 
-node "$rootdir/bin/veendor.js" install --debug
+node "$rootdir/bin/veendor.js" install -vvv --debug
 
 if [[ "$(cat node_modules/proof.txt)" != "this was pulled from archive" ]]; then
     cat node_modules/proof.txt

@@ -8,7 +8,7 @@ module.exports = {
             options: {
                 bucket: 'testbucket',
                 s3Options: {
-                    endpoint: 'wat.local:14569',
+                    endpoint: 'localhost:14569',
                     sslEnabled: false,
                     s3ForcePathStyle: true,
                 },

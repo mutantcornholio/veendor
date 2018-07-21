@@ -5,7 +5,7 @@ export TEST_DIR="$(pwd)/local"
 
 echo -e "\nRUNNING TEST\n"
 
-node "$rootdir/bin/veendor.js" install --debug
+node "$rootdir/bin/veendor.js" install -vvv --debug
 
 cd "$(pwd)/local"
 tar -xf 7d0db335c82dfd9aa2b96dabc485b89ebaa1496f.tar.gz

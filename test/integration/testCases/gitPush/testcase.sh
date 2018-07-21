@@ -5,7 +5,7 @@ export TEST_REPO_DIR="$(pwd)/repo"
 
 echo -e "\nRUNNING TEST\n"
 
-node "$rootdir/bin/veendor.js" install --debug
+node "$rootdir/bin/veendor.js" install -vvv --debug
 
 git clone "$(pwd)/repo" repolocal
 cd repolocal

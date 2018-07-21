@@ -2,7 +2,7 @@
 
 mkdir "$(pwd)/local"
 
-node "$rootdir/bin/veendor.js" install --debug
+node "$rootdir/bin/veendor.js" install -vvv --debug
 
 if [[ "$(cat node_modules/proof.txt)" != "this was pulled from archive" ]]; then
     cat node_modules/proof.txt

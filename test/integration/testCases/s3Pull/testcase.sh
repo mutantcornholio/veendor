@@ -8,7 +8,7 @@ curl -X PUT -T "$rootdir/test/integration/bundles/7d0db335c82dfd9aa2b96dabc485b8
     -H 'Host: testbucket.s3.amazonaws.com' \
     http://localhost:14569/7d0db335c82dfd9aa2b96dabc485b89ebaa1496f.tar.gz
 
-node "$rootdir/bin/veendor.js" install --debug
+node "$rootdir/bin/veendor.js" install -vvv --debug
 
 if [[ "$(cat node_modules/proof.txt)" != "this was pulled from archive" ]]; then
     cat node_modules/proof.txt
