@@ -8,6 +8,7 @@ const path = require('path');
 const _ = require('lodash');
 
 const install = require('../../../lib/install');
+const installHelpers = require('../../../lib/install/helpers');
 const pkgJson = require('../../../lib/pkgjson');
 const gitWrapper = require('../../../lib/commandWrappers/gitWrapper');
 const npmWrapper = require('../../../lib/commandWrappers/npmWrapper');
@@ -26,7 +27,14 @@ let fakeBackends;
 let config;
 let npmWrapperInstallAllStub;
 let rsyncWrapperAvailabilityStub;
+let createCleanCacheDirStub;
 let resultDir;
+
+let fakeCreateCleanCacheDir = backend => {
+    const res = `.veendor/${backend.alias}`;
+    return fsExtra.ensureDir(res)
+        .then(() => res);
+};
 
 const originalCwd = process.cwd();
 
@@ -42,6 +50,9 @@ describe('install', () => {
         npmWrapperInstallAllStub = sandbox.stub(npmWrapper, 'installAll').resolves();
 
         rsyncWrapperAvailabilityStub = sandbox.stub(rsyncWrapper, 'rsyncAvailable').resolves(false);
+
+        createCleanCacheDirStub = sandbox.stub(installHelpers, 'createCleanCacheDir')
+            .callsFake(fakeCreateCleanCacheDir);
 
         resultDir = path.join(process.cwd(), '.veendor', '__result');
 
@@ -312,12 +323,26 @@ describe('install', () => {
         install({config}).then(checkResult, checkResult);
     });
 
-    it('should create cache directory before pull', done => {
-        const checkResult = () => {
-            fsExtra.stat(path.resolve('.veendor', fakeBackends[0].alias)).then(() => done(), done);
-        };
+    it('should call createCleanCacheDir before pull', () => {
+        let calledBefore = false;
+        createCleanCacheDirStub.restore();
 
-        install({config}).then(checkResult, checkResult);
+        const createCleanCacheDirMock = sandbox.mock(installHelpers)
+            .expects('createCleanCacheDir')
+            .callsFake(fakeCreateCleanCacheDir);
+
+        const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend)
+            .expects('pull')
+            .callsFake(() => {
+                createCleanCacheDirMock.verify();
+                calledBefore = true;
+                return helpers.createNodeModules();
+            });
+
+        return install({config}).then(() => {
+            fakeBackends0Mock.verify();
+            assert(calledBefore === true);
+        });
     });
 
     it('should pass cache directory to pull', done => {
@@ -333,61 +358,6 @@ describe('install', () => {
         const checkResult = helpers.checkMockResult.bind(null, [fakeBackends0Mock, fakeBackends1Mock], done);
 
         install({config}).then(checkResult, checkResult);
-    });
-
-    it('should clean cache directory before pull', done => {
-        const mockfsConfig = {
-            '.veendor': {},
-            'package.json': JSON.stringify(PKGJSON)
-        };
-
-        mockfsConfig['.veendor'][fakeBackends[0].alias] = {'shouldBeDeleted': 'true'};
-        mockfs(mockfsConfig);
-
-        fakeBackends[0].backend.pull = () => {
-            return new Promise((resolve, reject) => {
-                fsExtra.stat(path.resolve('.veendor', fakeBackends[0].alias, 'shouldBeDeleted')).then(
-                    () => {done(new Error(`'.veendor/${fakeBackends[0].alias}/shouldBeDeleted' is not deleted`))},
-                    (err) => {
-                        if (err.code === 'ENOENT') {
-                            done();
-                        } else {
-                            done(err);
-                        }
-
-                    }
-                );
-
-                return reject(new errors.BundleNotFoundError);
-            });
-        };
-
-        install({config});
-    });
-
-    it('should not clean cache directory before pull if backend has keepCache === true property', done => {
-        const mockfsConfig = {
-            '.veendor': {},
-            'package.json': JSON.stringify(PKGJSON)
-        };
-
-        mockfsConfig['.veendor'][fakeBackends[0].alias] = {'shouldStay': 'true'};
-        mockfs(mockfsConfig);
-
-        fakeBackends[0].backend.keepCache = true;
-
-        fakeBackends[0].backend.pull = () => {
-            return new Promise((resolve, reject) => {
-                fsExtra.stat(path.resolve(originalCwd, '.veendor', fakeBackends[0].alias, 'shouldStay')).then(
-                    () => {done()},
-                    done
-                );
-
-                return reject(new errors.BundleNotFoundError);
-            });
-        };
-
-        install({config});
     });
 
     it('should call `npmWrapper.installAll` if no backend succeded', done => {
@@ -817,26 +787,43 @@ describe('install', () => {
             install({config}).then(checkResult, checkResult);
         });
 
-        it('should create cache directory before push', () => {
-            mockfs({
-                'package.json': JSON.stringify(PKGJSON)
-            });
+        it('should call createCleanCacheDir before push', () => {
+            let calledBefore = false;
+            let calls = 0;
+            createCleanCacheDirStub.restore();
 
-            const originalPull = fakeBackends[1].backend.pull;
-            sandbox
-                .stub(fakeBackends[1].backend, 'pull')
-                .callsFake((hash) => {
-                    return fsExtra.remove(path.join(originalCwd, '.veendor', fakeBackends[0].alias))
-                        .then(() => originalPull(hash))
+            const createCleanCacheDirMock = sandbox.mock(installHelpers)
+                .expects('createCleanCacheDir')
+                .withArgs(fakeBackends[0])
+                .atLeast(1)
+                .callsFake(backend => {
+                    calls++;
+                    return fakeCreateCleanCacheDir(backend);
                 });
 
-            config.useGitHistory = {
-                depth: 2
-            };
+            const fakeBackends0Mock = sandbox.mock(fakeBackends[0].backend);
 
-            return install({config}).then(() => assert.isFulfilled(
-                fsExtra.stat(path.resolve('.veendor', fakeBackends[0].alias)))
-            );
+            fakeBackends0Mock
+                .expects('pull')
+                .callsFake(() => {
+                    calls--;
+                    return Promise.reject(new errors.BundleNotFoundError);
+                });
+
+            fakeBackends0Mock
+                .expects('push')
+                .callsFake(() => {
+                    assert.equal(calls, 1);
+                    calledBefore = true;
+                    return Promise.resolve();
+                });
+
+            config.backends = [fakeBackends[0]];
+
+            return install({config}).then(() => {
+                fakeBackends0Mock.verify();
+                assert(calledBefore === true);
+            });
         });
 
         it('should pass cache directory to push', done => {
@@ -848,7 +835,7 @@ describe('install', () => {
 
             backendMock0
                 .expects('push')
-                .withArgs(sinon.match.any, sinon.match.any, path.resolve('.veendor', fakeBackends[0].alias))
+                .withArgs(sinon.match.any, sinon.match.any, sinon.match(fakeBackends[0].alias))
                 .resolves();
 
             const checkResult = helpers.checkMockResult.bind(null, [backendMock0], done);
@@ -858,70 +845,6 @@ describe('install', () => {
             };
 
             install({config}).then(checkResult, checkResult);
-        });
-
-        it('should clean cache directory before push', done => {
-            mockfs({
-                'package.json': JSON.stringify(PKGJSON)
-            });
-
-            fakeBackends[0].backend.pull = () => {
-                const mockfsConfig = {
-                    '.veendor': {},
-                    'package.json': JSON.stringify(PKGJSON)
-                };
-
-                mockfsConfig['.veendor'][fakeBackends[0].alias] = {'shouldBe': 'deleted'};
-                mockfs(mockfsConfig);
-
-                return Promise.reject(new errors.BundleNotFoundError);
-            };
-
-            fakeBackends[0].backend.push = () => {
-                return new Promise(resolve => {
-                    fsExtra.stat(path.resolve('.veendor', fakeBackends[0].alias, 'shouldBe')).then(
-                        () => {done(new Error(`'.veendor/${fakeBackends[0].alias}/shouldBe' should be deleted`))},
-                        (err) => {
-                            if (err.code === 'ENOENT') {
-                                done();
-                            } else {
-                                done(err);
-                            }
-                        }
-                    );
-
-                    return resolve();
-                });
-            };
-
-            config.useGitHistory = {
-                depth: 2
-            };
-
-            install({config});
-        });
-
-        it('should not clean cache directory before push if backend has keepCache === true property', () => {
-            mockfs({
-                'package.json': JSON.stringify(PKGJSON)
-            });
-
-            const filePath = path.join(process.cwd(), '.veendor', fakeBackends[0].alias, 'shouldStay');
-
-            fakeBackends[0].backend.keepCache = true;
-            fakeBackends[0].backend.pull = () => {
-                fsExtra.writeFileSync(filePath, 'right here');
-
-                return Promise.reject(new errors.BundleNotFoundError);
-            };
-
-            config.useGitHistory = {
-                depth: 2
-            };
-
-            return install({config}).then(
-                () => assert.equal(fsExtra.readFileSync(filePath).toString(), 'right here')
-            );
         });
 
         it('should call installAll if can not find old bundles', done => {
