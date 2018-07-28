@@ -14,14 +14,13 @@ const s3Backend = require('../../../lib/backends/s3');
 const tarWrapper = require('../../../lib/commandWrappers/tarWrapper');
 const errors = require('../../../lib/errors');
 const {
-    checkMockResult,
     AWSError,
     AnError,
-    expectCalls,
     SuccessfulStream,
     FailingStream,
     DevNullStream,
     fakeExtractArchiveFromStream,
+    fakeCreateStreamArchive,
 } = require('../helpers');
 
 let sandbox;
@@ -96,10 +95,8 @@ describe('s3 backend', () => {
             }
         };
 
-        tarWrapperCreateArchiveStub = sandbox.stub(tarWrapper, 'createArchive').callsFake(outPath => {
-            fs.writeFileSync(outPath, '');
-            return Promise.resolve();
-        });
+        tarWrapperCreateArchiveStub = sandbox.stub(tarWrapper, 'createStreamArchive')
+            .callsFake(fakeCreateStreamArchive);
 
         tarWrapperExctractArchiveFromStreamStub = sandbox.stub(tarWrapper, 'extractArchiveFromStream')
             .callsFake(fakeExtractArchiveFromStream);
@@ -168,20 +165,7 @@ describe('s3 backend', () => {
     });
 
     describe('push', () => {
-        it('should pack node_modules to cache directory', done => {
-            const checkResult = expectCalls.bind(null, [{
-                spy: tarWrapper.createArchive,
-                args: [
-                    sinon.match(`.veendor/s3/${fakeHash}.tar.gz`),
-                    [sinon.match('node_modules')],
-                    defaultOptions.compression
-                ]
-            }], done);
-
-            s3Backend.push(fakeHash, defaultOptions, '.veendor/s3').then(checkResult, checkResult);
-        });
-
-        it('should call s3.headObject', done => {
+        it('should call s3.headObject', () => {
             fakeS3HeadResultPromise = Promise.resolve({
                 AcceptRanges: 'bytes',
                 LastModified: new Date(),
@@ -200,9 +184,7 @@ describe('s3 backend', () => {
 
             s3Mock.expects('upload').never();
 
-            const checkResult = checkMockResult.bind(null, [s3Mock], done);
-
-            s3Backend.push(fakeHash, defaultOptions, '.veendor/s3').then(checkResult, checkResult);
+            return s3Backend.push(fakeHash, defaultOptions, '.veendor/s3').catch(() => s3Mock.verify());
         });
 
         it('should with BundleAlreadyExistsError is object exists', done => {
@@ -219,14 +201,9 @@ describe('s3 backend', () => {
                 .notify(done);
         });
 
-        it('should call s3.upload with readable stream from archive', done => {
-            const readStream = new SuccessfulStream();
-            const fsMock = sandbox.mock(fs);
-
-            fsMock
-                .expects('createReadStream')
-                .withArgs(`.veendor/s3/${fakeHash}.tar.gz`)
-                .returns(readStream);
+        it('should create streamArchive and call s3.upload with it', () => {
+            const controlToken = {};
+            const {stream} = fakeCreateStreamArchive('node_moudles', 'gz', {controlToken});
 
             const s3Mock = sandbox.mock(defaultOptions.__s3);
 
@@ -234,12 +211,10 @@ describe('s3 backend', () => {
                 Bucket: 'mybucket',
                 Key: `${fakeHash}.tar.gz`,
                 ACL: defaultOptions.objectAcl,
-                Body: readStream,
+                Body: stream,
             }).callThrough();
 
-            const checkResult = checkMockResult.bind(null, [fsMock, s3Mock], done);
-
-            s3Backend.push(fakeHash, defaultOptions, '.veendor/s3').then(checkResult, checkResult);
+            s3Backend.push(fakeHash, defaultOptions, '.veendor/s3').then(() => s3Mock.verify());
         });
 
         it('should reject with BundleUploadError if s3 upload fails', done => {

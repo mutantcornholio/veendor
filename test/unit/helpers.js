@@ -146,6 +146,13 @@ function fakeExtractArchiveFromStream(stream) {
     });
 }
 
+function fakeCreateStreamArchive(inputPaths, compressionType, {controlToken = {}}) {
+    return {
+        stream: new SuccessfulStream(),
+        promise: Promise.resolve(),
+    };
+}
+
 module.exports = {
     fakeBackendConfig,
     createNodeModules,
@@ -159,4 +166,5 @@ module.exports = {
     FailingStream,
     DevNullStream,
     fakeExtractArchiveFromStream,
+    fakeCreateStreamArchive,
 };

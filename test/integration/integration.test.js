@@ -12,6 +12,7 @@ const AWS = require('aws-sdk');
 const S3rver = require('s3rver');
 
 const helpers = require('../../lib/commandWrappers/helpers');
+const {getTmpDir} = require('../../lib/install/helpers');
 
 chai.use(chaiAsPromised);
 
@@ -184,7 +185,7 @@ function executeBashTest(testCase, remainingVersions) {
             .getOutput(
                 'bash',
                 [TEST_SCRIPT, testCase, testDir, cacheDir, nodeVersion, npmVersion],
-                {timeoutDuration: 10000}
+                {timeoutDuration: 20000}
             ).then(() => {
                 if (remainingVersions.length === 0) {
                     resolve();

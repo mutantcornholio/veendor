@@ -28,6 +28,7 @@ rm -rf "${tmpdir}"
 mkdir -p "${tmpdir}"
 
 rm -rf "${cachedir}"
+mkdir -p "${cachedir}"
 
 set +x
 source "${NVM_DIR}/nvm.sh"
