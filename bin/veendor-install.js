@@ -25,7 +25,8 @@ function increaseVerbosity(v, total) {
     return total + 1;
 }
 
-const daLogger = logger.setDefaultLogger(1, 3 - program.verbose);
+
+const daLogger = logger.setDefaultLogger(1, 3 - (program.verbose || 0));
 
 let config;
 
