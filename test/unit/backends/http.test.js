@@ -12,12 +12,21 @@ chai.use(chaiAsPromised);
 const httpBackend = require('../../../lib/backends/http');
 const tarWrapper = require('../../../lib/commandWrappers/tarWrapper');
 const errors = require('../../../lib/errors');
-const {checkMockResult, checkNock, expectCalls, FailingStream} = require('../helpers');
+const {
+    checkMockResult,
+    checkNock,
+    expectCalls,
+    SuccessfulStream,
+    FailingStream,
+    fakeExtractArchiveFromStream,
+} = require('../helpers');
 
 let sandbox;
 let fakeHash;
 let defaultOptions;
 let mockfsConfig;
+let tarWrapperCreateArchiveStub;
+let tarWrapperExctractArchiveFromStreamStub;
 
 
 describe('http backend', () => {
@@ -33,8 +42,17 @@ describe('http backend', () => {
         mockfs(mockfsConfig);
 
         sandbox = sinon.sandbox.create();
-        sandbox.stub(tarWrapper, 'createArchive').resolves();
-        sandbox.stub(tarWrapper, 'extractArchive').resolves();
+
+        tarWrapperCreateArchiveStub = sandbox
+            .stub(tarWrapper, 'createArchive')
+            .callsFake(outPath => {
+                fs.writeFileSync(outPath, '');
+                return Promise.resolve();
+            });
+
+        tarWrapperExctractArchiveFromStreamStub = sandbox
+            .stub(tarWrapper, 'extractArchiveFromStream')
+            .callsFake(fakeExtractArchiveFromStream);
 
         defaultOptions = {
             resolveUrl: bundleId => `http://testhost.wat/${bundleId}.tar.gz`,
@@ -115,24 +133,23 @@ describe('http backend', () => {
             assert.isRejected(result, httpBackend.InvalidProtocolError).notify(done);
         });
 
-        it('should download file to temp directory', done => {
+        it('should pipe response stream to tar', () => {
+            const bundleStream = new SuccessfulStream();
+
+            tarWrapperExctractArchiveFromStreamStub.restore();
+            const tarWrapperMock = sandbox.mock(tarWrapper)
+                .expects('extractArchiveFromStream')
+                .callsFake(stream => fakeExtractArchiveFromStream(stream)
+                    .then(chunks => {
+                        assert.equal(chunks[0], ('wertyuiopasdfghjk').repeat(5));
+                    }));
+
             nock('http://testhost.wat')
                 .get(`/${fakeHash}.tar.gz`)
-                .reply(200, 'wertyuiopasdfghj', {'Content-Type': 'application/x-gzip'});
+                .reply(200, bundleStream, {'Content-Type': 'application/x-gzip'});
 
-            const checkResult = () => {
-                fsExtra
-                    .readFile(`.veendor/http/${fakeHash}.tar.gz`)
-                    .then(buf => {
-                        const res = buf.toString();
-                        assert.equal(res, 'wertyuiopasdfghj');
-                    })
-                    .then(done, done);
-
-            };
-
-            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http');
-            result.then(checkResult, checkResult);
+            return httpBackend.pull(fakeHash, defaultOptions, '.veendor/http')
+                .then(() => tarWrapperMock.verify());
         });
 
         it('should reject with BundleNotFoundError on 404', done => {
@@ -180,19 +197,6 @@ describe('http backend', () => {
 
             const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http');
             assert.isRejected(result, httpBackend.BundleDownloadError).notify(done);
-        });
-
-        it('should unpack archive to pwd', done => {
-            nock('http://testhost.wat')
-                .get(`/${fakeHash}.tar.gz`)
-                .reply(200, 'wertyuiopasdfghj', {'Content-Type': 'application/x-gzip'});
-
-            const checkResult = expectCalls.bind(null, [{
-                spy: tarWrapper.extractArchive,
-                args: [sinon.match(`.veendor/http/${fakeHash}.tar.gz`)]
-            }], done);
-
-            httpBackend.pull(fakeHash, defaultOptions, '.veendor/http').then(checkResult, checkResult);
         });
     });
 

@@ -129,6 +129,23 @@ class DevNullStream extends stream.Writable {
     }
 }
 
+function fakeExtractArchiveFromStream(stream) {
+    const allchunks = [];
+    let interval;
+    return new Promise(resolve => {
+        stream.read();
+        interval = setInterval(() => {
+            const chunk = stream.read();
+            if (chunk === null) {
+                clearInterval(interval);
+                return resolve(allchunks);
+            } else {
+                allchunks.push(chunk.toString());
+            }
+        }, 10);
+    });
+}
+
 module.exports = {
     fakeBackendConfig,
     createNodeModules,
@@ -141,4 +158,5 @@ module.exports = {
     SuccessfulStream,
     FailingStream,
     DevNullStream,
+    fakeExtractArchiveFromStream,
 };

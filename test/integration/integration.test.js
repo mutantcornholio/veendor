@@ -184,7 +184,7 @@ function executeBashTest(testCase, remainingVersions) {
             .getOutput(
                 'bash',
                 [TEST_SCRIPT, testCase, testDir, cacheDir, nodeVersion, npmVersion],
-                {timeoutDuration: 20000}
+                {timeoutDuration: 10000}
             ).then(() => {
                 if (remainingVersions.length === 0) {
                     resolve();
