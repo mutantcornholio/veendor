@@ -51,10 +51,10 @@ describe('install', () => {
 
         rsyncWrapperAvailabilityStub = sandbox.stub(rsyncWrapper, 'rsyncAvailable').resolves(false);
 
+        resultDir = path.join(installHelpers.getTmpDir(), '__result');
+
         createCleanCacheDirStub = sandbox.stub(installHelpers, 'createCleanCacheDir')
             .callsFake(fakeCreateCleanCacheDir);
-
-        resultDir = path.join(process.cwd(), '.veendor', '__result');
 
         PKGJSON = {
             dependencies: {
