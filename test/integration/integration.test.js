@@ -5,6 +5,8 @@ const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const fsExtra = require('fs-extra');
 const _ = require('lodash');
+const crypto = require('crypto');
+const os = require('os');
 const path = require('path');
 const AWS = require('aws-sdk');
 const S3rver = require('s3rver');
@@ -172,10 +174,16 @@ function executeBashTest(testCase, remainingVersions) {
             process.cwd(), 'tmp', 'test', 'integration', testCase, `${nodeVersion}-${npmVersion}`
         );
 
+
+        const tmpDir = os.tmpdir();
+        const cwdHash = crypto.createHash('sha1');
+        cwdHash.update(testDir);
+        const cacheDir = path.resolve(tmpDir, `veendor-${cwdHash.digest('hex')}`);
+
         return helpers
             .getOutput(
                 'bash',
-                [TEST_SCRIPT, testCase, testDir, nodeVersion, npmVersion],
+                [TEST_SCRIPT, testCase, testDir, cacheDir, nodeVersion, npmVersion],
                 {timeoutDuration: 20000}
             ).then(() => {
                 if (remainingVersions.length === 0) {

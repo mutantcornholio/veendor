@@ -17,15 +17,17 @@ rootdir="$(pwd)"
 dirname="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 testcase="$1"
 tmpdir="$2"
-node_version="$3"
-npm_version="$4"
+cachedir="$3"
+node_version="$4"
+npm_version="$5"
 
 export npm_config_prefix=
 export NVM_DIR="${rootdir}/nvm"
 
-
 rm -rf "${tmpdir}"
 mkdir -p "${tmpdir}"
+
+rm -rf "${cachedir}"
 
 set +x
 source "${NVM_DIR}/nvm.sh"

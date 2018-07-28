@@ -5,7 +5,8 @@ const sinon = require('sinon');
 const mockfs = require('mock-fs');
 const fsExtra = require('fs-extra');
 const path = require('path');
-const _ = require('lodash');
+const os = require('os');
+const crypto = require('crypto');
 
 const assert = chai.assert;
 chai.use(chaiAsPromised);
@@ -14,14 +15,24 @@ const helpers = require('../helpers');
 
 const {createCleanCacheDir} = require('../../../lib/install/helpers');
 
+const FAKE_HASH = '1234567890deadbeef1234567890';
+
 let sandbox;
 let fakeBackend;
+let fakeSha1;
 
 describe('createCleanCacheDir', () => {
     beforeEach(() => {
         sandbox = sinon.sandbox.create();
         mockfs({});
         fakeBackend = helpers.fakeBackendConfig('fakeBackends[0]');
+
+        fakeSha1 = {
+            update: () => {},
+            digest: () => FAKE_HASH,
+        };
+
+        sandbox.stub(crypto, 'createHash').returns(fakeSha1);
     });
 
     afterEach(() => {
@@ -31,7 +42,6 @@ describe('createCleanCacheDir', () => {
 
     it('creates new cache dir', () => {
         return createCleanCacheDir(fakeBackend).then(dir => {
-            console.log('\n\n\n', dir, '\n\n\n');
             assert(fsExtra.statSync(dir).isDirectory());
         });
     });
@@ -55,15 +65,13 @@ describe('createCleanCacheDir', () => {
             .then(dir => assert.equal(fsExtra.readFileSync(path.join(dir, 'foo')), 'bar'));
     });
 
-    xit('creates cache directory in os.tmpdir() if can', () => {
+    it('creates cache directory in os.tmpdir() if can', () => {
+        const tmpDir = os.tmpdir();
 
+        return createCleanCacheDir(fakeBackend).then(dir => assert.match(dir, new RegExp(`^${tmpDir}`)));
     });
 
-    xit('contains hash of process.cwd() in tmpdir name', () => {
-
-    });
-
-    xit('creates cache directory in process.cwd()/.veendor if can\'t create it in os.tmpdir()', () => {
-
+    it('contains hash of process.cwd() in tmpdir name', () => {
+        return createCleanCacheDir(fakeBackend).then(dir => assert.include(dir, FAKE_HASH));
     });
 });
