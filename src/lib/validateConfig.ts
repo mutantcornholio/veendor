@@ -4,7 +4,7 @@ import semver from 'semver';
 import errors from './errors';
 import npmWrapper from './commandWrappers/npmWrapper';
 
-type PartialConfig = {
+export type PartialConfig = {
     [P in keyof Config]?: P extends 'backends' ? Array<InputPartialBackendConfig> : Config[P]
 }
 
@@ -14,7 +14,7 @@ type InputPartialBackendConfig = {
 
 type PartialBackend = Partial<Backend>;
 
-module.exports = function validateConfig(config: PartialConfig) {
+export default function validateConfig(config: PartialConfig): Promise<Config> {
     const validationPromises = [];
 
     if (!(config.backends instanceof Array) || config.backends.length === 0) {
@@ -76,12 +76,12 @@ module.exports = function validateConfig(config: PartialConfig) {
     }
 
     if (config.veendorVersion !== undefined) {
-        if (!semver.satisfies(VEENDOR_VERSION, config.veendorVersion)) {
+        if (!semver.satisfies(global.VEENDOR_VERSION, config.veendorVersion)) {
             return Promise.reject(new InvalidVeendorVersionError(config.veendorVersion));
         }
     }
 
-    return Promise.all(validationPromises);
+    return Promise.all(validationPromises).then(() => <Config>config);
 };
 
 function validateBackend(backendConfig: InputPartialBackendConfig, position: number) {
@@ -138,50 +138,41 @@ function validateBackend(backendConfig: InputPartialBackendConfig, position: num
     return Promise.resolve();
 }
 
-class EmptyBackendsPropertyError extends errors.VeendorError {
+export class EmptyBackendsPropertyError extends errors.VeendorError {
     constructor() {
         super('no backends found in config');
     }
 }
 
-class InvalidBackendError extends errors.VeendorError {
+export class InvalidBackendError extends errors.VeendorError {
     constructor(alias: string, field: string) {
         super(`backend '${alias}' has lacks of has invalid '${field}' field`);
     }
 }
 
-class InvalidBackendOptionError extends errors.VeendorError {
+export class InvalidBackendOptionError extends errors.VeendorError {
     constructor(alias: string, field: string) {
         super(`backend\'s '${alias}' '${field}' option in invalid`);
     }
 }
 
-class EmptyBackendAliasError extends errors.VeendorError {
+export class EmptyBackendAliasError extends errors.VeendorError {
     constructor(position: number) {
         super(`backend at position '${position}' lacks or has invalid 'alias' field`);
     }
 }
 
-class InvalidNpmVersionError extends errors.VeendorError {
+export class InvalidNpmVersionError extends errors.VeendorError {
     constructor(expected: string, actual: string) {
         super(`npm version '${actual}' does not comply with '${expected}' constraint`);
     }
 }
 
-class InvalidVeendorVersionError extends errors.VeendorError {
+export class InvalidVeendorVersionError extends errors.VeendorError {
     constructor(expected: string) {
-        super(`veendor version '${VEENDOR_VERSION}' does not comply with '${expected}' constraint`);
+        super(`veendor version '${global.VEENDOR_VERSION}' does not comply with '${expected}' constraint`);
     }
 }
 
-class AliasesNotUniqueError extends errors.VeendorError {}
-class InvalidUseGitHistoryError extends errors.VeendorError {}
-
-module.exports.EmptyBackendsPropertyError = EmptyBackendsPropertyError;
-module.exports.InvalidBackendError = InvalidBackendError;
-module.exports.InvalidBackendOptionError = InvalidBackendOptionError;
-module.exports.EmptyBackendAliasError = EmptyBackendAliasError;
-module.exports.InvalidNpmVersionError = InvalidNpmVersionError;
-module.exports.InvalidVeendorVersionError = InvalidVeendorVersionError;
-module.exports.AliasesNotUniqueError = AliasesNotUniqueError;
-module.exports.InvalidUseGitHistoryError = InvalidUseGitHistoryError;
+export class AliasesNotUniqueError extends errors.VeendorError {}
+export class InvalidUseGitHistoryError extends errors.VeendorError {}

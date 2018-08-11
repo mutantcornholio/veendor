@@ -1,4 +1,8 @@
-declare var VEENDOR_VERSION: string;
+declare namespace NodeJS {
+    interface Global {
+        VEENDOR_VERSION: string
+    }
+}
 
 declare type BackendConfig = {
     backend: Backend,

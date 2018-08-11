@@ -1,9 +1,11 @@
 'use strict';
 
-const fsExtra = require('fs-extra');
-const path = require('path');
+import fs from 'fs';
+import util from 'util';
 
-const getLogger = require('./logger').getLogger;
+import fsExtra from 'fs-extra';
+import path from 'path';
+import {getLogger} from "@/lib/logger";
 
 // add yarn.lock one day
 const LOCKFILE_TYPES = ['npm-shrinkwrap.json', 'package-lock.json'];
@@ -19,12 +21,17 @@ module.exports = function resolveLockfile() {
     return Promise.all(statPromises).then(getLockfile);
 };
 
-function getLockfile(results) {
+function getLockfile(results: Array<fs.Stats|NodeJS.ErrnoException>) {
     const logger = getLogger();
 
     for (let i=0; i < LOCKFILE_TYPES.length; i++) {
-        if (results[i].code && results[i].code === 'ENOENT') {
-            continue;
+        if (util.isError(results[i])) {
+            const err = <NodeJS.ErrnoException>(results[i]);
+            if (err.code && err.code === 'ENOENT') {
+                continue;
+            }
+
+            throw err;
         }
 
         logger.info(`Found '${LOCKFILE_TYPES[i]}'. Using it to calculate bundle hashes.`);

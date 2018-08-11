@@ -1,11 +1,10 @@
-'use strict';
+import resolveConfig from '@/lib/resolveConfig';
 
 const program = require('commander');
 const path = require('path');
 const fsExtra = require('fs-extra');
 
 const pkgJson = require('../lib/pkgjson');
-const resolveConfig = require('../lib/resolveConfig');
 const resolveLockfile = require('../lib/resolveLockfile');
 const logger = require('../lib/logger');
 

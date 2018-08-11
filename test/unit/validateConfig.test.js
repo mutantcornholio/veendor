@@ -7,7 +7,7 @@ const sinon = require('sinon');
 const assert = chai.assert;
 chai.use(chaiAsPromised);
 
-const validateConfig = require('@/lib/validateConfig');
+const validateConfig = require('@/lib/validateConfig').default;
 const npmWrapper = require('@/lib/commandWrappers/npmWrapper');
 const helpers = require('./helpers');
 const veendorVersion = require('../../package.json').version;
@@ -23,7 +23,7 @@ describe('validateConfig', function () {
 
         sandbox = sinon.sandbox.create();
 
-        VEENDOR_VERSION = veendorVersion;
+        global.VEENDOR_VERSION = veendorVersion;
     });
 
     afterEach(() => {
@@ -232,14 +232,14 @@ describe('validateConfig', function () {
     });
 
     it('should throw InvalidVeendorVersionError if veendor does not comply with veendorVersion constraint', done => {
-        VEENDOR_VERSION = '2.0.0';
+        global.VEENDOR_VERSION = '2.0.0';
         config.veendorVersion = '>2.1.0';
 
         assert.isRejected(validateConfig(config), validateConfig.InvalidVeendorVersionError).notify(done);
     });
 
     it('should resolve, if veendor version is compatible', done => {
-        VEENDOR_VERSION = '2.0.0';
+        global.VEENDOR_VERSION = '2.0.0';
         config.veendorVersion = '^2';
 
         assert.isFulfilled(validateConfig(config)).notify(done);

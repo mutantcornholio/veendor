@@ -1,11 +1,12 @@
 'use strict';
 
+import resolveConfig from '../lib/resolveConfig';
+
 const program = require('commander');
 const fsExtra = require('fs-extra');
 const path = require('path');
 
 const install = require('../lib/install');
-const resolveConfig = require('../lib/resolveConfig');
 const resolveLockfile = require('../lib/resolveLockfile');
 const gitWrapper = require('../lib/commandWrappers/gitWrapper');
 const logger = require('../lib/logger');
