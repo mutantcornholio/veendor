@@ -18,18 +18,25 @@ declare type Backend = {
     validateOptions: (options: BackendOptions) => Promise<any>,
 }
 
-declare type BackendOptions = {};
+declare type BackendOptions = object;
 
 declare type Config = {
     installDiff: boolean,
     fallbackToNpm: boolean,
-    packageHash?: {
-
-    },
+    packageHash?: PackageHashOptions,
     useGitHistory?: {
         depth: number,
     },
     backends: BackendConfig[] | undefined,
     veendorVersion?: string,
     npmVersion?: string,
+}
+
+declare type PkgJson = {
+    dependencies: object,
+    devDependencies: object,
+}
+
+declare type PackageHashOptions = {
+    suffix?: (() => string) | string
 }
