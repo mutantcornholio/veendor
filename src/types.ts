@@ -12,6 +12,7 @@ export type Backend = {
     pull: (hash: string, options: BackendOptions, cacheDir: string) => Promise<any>,
     push: (hash: string, options: BackendOptions, cacheDir: string) => Promise<any>,
     validateOptions: (options: BackendOptions) => Promise<any>,
+    keepCache?: boolean,
 }
 
 export type BackendOptions = object;
@@ -23,9 +24,19 @@ export type Config = {
     useGitHistory?: {
         depth: number,
     },
-    backends: BackendConfig[] | undefined,
+    backends: BackendConfig[],
     veendorVersion?: string,
     npmVersion?: string,
+}
+
+export type ConfigWithHistory = Config & {
+    useGitHistory: {
+        depth: number,
+    },
+};
+
+export function configHasHistory(config: Config): config is ConfigWithHistory {
+    return typeof config.useGitHistory === 'object' && config.useGitHistory.depth > 0;
 }
 
 export type PkgJson = {

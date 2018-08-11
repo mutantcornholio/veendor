@@ -10,7 +10,7 @@ import {getLogger} from "@/lib/logger";
 // add yarn.lock one day
 const LOCKFILE_TYPES = ['npm-shrinkwrap.json', 'package-lock.json'];
 
-module.exports = function resolveLockfile() {
+export default function resolveLockfile(): Promise<string | null> {
     const logger = getLogger();
     logger.trace(`Looking for lockfiles: ${LOCKFILE_TYPES.join(', ')}`);
     const statPromises = LOCKFILE_TYPES.map(
@@ -19,9 +19,9 @@ module.exports = function resolveLockfile() {
             .catch(error => error)); // not letting Promise.all to reject early
 
     return Promise.all(statPromises).then(getLockfile);
-};
+}
 
-function getLockfile(results: Array<fs.Stats|NodeJS.ErrnoException>) {
+function getLockfile(results: Array<fs.Stats|NodeJS.ErrnoException>): string | null {
     const logger = getLogger();
 
     for (let i=0; i < LOCKFILE_TYPES.length; i++) {

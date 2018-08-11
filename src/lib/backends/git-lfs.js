@@ -58,18 +58,21 @@ function validateOptions(options) {
 function pull(hash, options, cacheDir) {
     const repoDir = path.resolve(cacheDir, 'repo');
     return gitWrapper.isGitRepo(repoDir)
-        .then(() => {
-            if (module.exports._remoteIsFresh) {
-                return Promise.resolve();
-            }
+        .then(res => {
+            if (res) {
+                if (module.exports._remoteIsFresh) {
+                    return Promise.resolve();
+                }
 
-            return gitWrapper.fetch(repoDir);
-        }, () => {
-            if (module.exports._remoteIsFresh) {
-                return Promise.resolve();
-            }
+                return gitWrapper.fetch(repoDir);
+            } else {
 
-            return gitWrapper.clone(options.repo, repoDir);
+                if (module.exports._remoteIsFresh) {
+                    return Promise.resolve();
+                }
+
+                return gitWrapper.clone(options.repo, repoDir);
+            }
         })
         .then(() => {
             module.exports._remoteIsFresh = true;

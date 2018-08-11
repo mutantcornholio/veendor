@@ -1,6 +1,6 @@
 import * as errors from '../errors';
 import {getLogger} from '../logger';
-import helpers from './helpers';
+import * as helpers from './helpers';
 import {BackendConfig} from '@/types';
 
 export default async function pushBackends(

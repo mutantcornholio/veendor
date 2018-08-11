@@ -43,7 +43,7 @@ export function calcHash(
     return result;
 }
 
-export function parsePkgJson(pkgJsonString: string) {
+export function parsePkgJson(pkgJsonString: string): Promise<PkgJson> {
     return new Promise((resolve, reject) => {
         let pkgJson;
 

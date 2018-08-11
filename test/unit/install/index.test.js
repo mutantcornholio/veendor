@@ -7,7 +7,7 @@ const fsExtra = require('fs-extra');
 const path = require('path');
 const _ = require('lodash');
 
-const install = require('@/lib/install');
+const install = require('@/lib/install').default;
 const installHelpers = require('@/lib/install/helpers');
 const pkgJson = require('@/lib/pkgjson');
 const gitWrapper = require('@/lib/commandWrappers/gitWrapper');
@@ -167,7 +167,7 @@ describe('install', () => {
             .expects('calcHash')
             .withArgs(PKGJSON, {watwatwat: 'wat'}).atLeast(1);
 
-        return install({config, lockfile: 'package-lock.json'}).then(() => pkgJsonMock.verify());
+        return install({config, lockfilePath: 'package-lock.json'}).then(() => pkgJsonMock.verify());
     });
 
     it('should call `pull` on all backends until any backend succedes', () => {
@@ -449,7 +449,7 @@ describe('install', () => {
                     return Promise.reject(new gitWrapper.TooOldRevisionError);
                 });
 
-            gitWrapperIsGitRepoStub = sandbox.stub(gitWrapper, 'isGitRepo').callsFake(() => Promise.resolve());
+            gitWrapperIsGitRepoStub = sandbox.stub(gitWrapper, 'isGitRepo').callsFake(() => Promise.resolve(true));
 
             npmWrapperInstallStub = sandbox.stub(npmWrapper, 'install').callsFake(() => Promise.resolve());
 
@@ -479,7 +479,7 @@ describe('install', () => {
 
             gitWrapperMock.expects('olderRevision')
                 .withArgs(process.cwd(), [sinon.match('package.json'), null], 3)
-                .resolves([JSON.stringify(fakePkgJson2)]);
+                .resolves([JSON.stringify(fakePkgJson2), null]);
 
             config.useGitHistory = {
                 depth: 2
@@ -580,7 +580,7 @@ describe('install', () => {
 
             config.backends = [fakeBackends[0]];
             config.useGitHistory = {
-                depth: 1
+                depth: 3
             };
 
             pkgJsonMock
@@ -599,7 +599,7 @@ describe('install', () => {
                 .atLeast(1);
             const checkResult = helpers.checkMockResult.bind(null, [pkgJsonMock], done);
 
-            install({config, lockfile: 'package-lock.json'}).then(checkResult, checkResult);
+            install({config, lockfilePath: 'package-lock.json'}).then(checkResult, checkResult);
         });
 
         it('should call `pull` on backends with gitWrapper.olderRevision\'s hash', done => {
@@ -650,7 +650,7 @@ describe('install', () => {
             gitWrapperIsGitRepoStub.restore();
             const gitWrapperMock = sandbox.mock(gitWrapper);
 
-            gitWrapperMock.expects('isGitRepo').rejects(new gitWrapper.NotAGitRepoError);
+            gitWrapperMock.expects('isGitRepo').resolves(false);
             gitWrapperMock.expects('olderRevision').never();
 
             const checkResult = helpers.checkMockResult.bind(null, [gitWrapperMock], done);
@@ -911,8 +911,8 @@ describe('install', () => {
 
             gitWrapper.olderRevision.restore();
             const gitWrapperMock = sandbox.mock(gitWrapper);
-            gitWrapperMock.expects('olderRevision').exactly(3).resolves([JSON.stringify(PKGJSON)]);
-            gitWrapperMock.expects('olderRevision').once().resolves([JSON.stringify(fakePkgJson2)]);
+            gitWrapperMock.expects('olderRevision').exactly(3).resolves([JSON.stringify(PKGJSON), null]);
+            gitWrapperMock.expects('olderRevision').once().resolves([JSON.stringify(fakePkgJson2), null]);
 
             config.backends = [fakeBackends[1]];
             config.useGitHistory = {
@@ -978,7 +978,7 @@ describe('install', () => {
             });
         });
 
-        it('failing to push with BundleAlreadyExistsError should call backend.pull only once', done => {
+        it('failing to push with BundleAlreadyExistsError should call backend.pull only once', () => {
             let turn = 0;
             fakeBackends[0].backend.push = () => Promise.reject(new errors.BundleAlreadyExistsError());
             fakeBackends[0].backend.pull = () => {
@@ -986,7 +986,11 @@ describe('install', () => {
                 return Promise.reject(new errors.BundleNotFoundError);
             };
 
-            assert.isRejected(install({config}), errors.BundleAlreadyExistsError).notify(done);
+            return install({config})
+                .catch(_.noop)
+                .then(() => {
+                    assert.equal(turn, 2);
+                });
         });
 
         it('re-pulling should be done with same bundle id, that original pull were', done => {
