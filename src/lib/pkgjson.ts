@@ -2,6 +2,9 @@ import crypto from 'crypto';
 import * as errors from './errors';
 import * as deepSortedJson from './deepSortedJson';
 
+import {JSONObject} from '@/serviceTypes';
+import {PkgJson, PackageHashOptions} from '@/types';
+
 /**
  * package.json-related stuff
  */
@@ -11,7 +14,7 @@ import * as deepSortedJson from './deepSortedJson';
  */
 export function calcHash(
     pkgJson: PkgJson,
-    lockfileContents: object | null = null,
+    lockfileContents: JSONObject | null = null,
     options: PackageHashOptions = {}
 ) {
     const resultSha1 = crypto.createHash('sha1');

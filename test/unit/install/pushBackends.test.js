@@ -5,7 +5,7 @@ const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
 const tracer = require('tracer');
 
-const pushBackends = require('@/lib/install/pushBackends');
+const pushBackends = require('@/lib/install/pushBackends').default;
 const errors = require('@/lib/errors');
 const logger = require('@/lib/logger');
 const helpers = require('../helpers');
@@ -41,13 +41,13 @@ describe('pushBackends', function () {
         fakeBackends[0].backend.push = () => Promise.reject(new helpers.AnError());
         fakeBackends[0].pushMayFail = true;
 
-        assert.isFulfilled(pushBackends(fakeBackends, fakeSha1, config)).notify(done);
+        assert.isFulfilled(pushBackends(fakeBackends, fakeSha1)).notify(done);
     });
 
     it('failing to push on backends without pushMayFail === true should reject install', done => {
         fakeBackends[0].backend.push = () => Promise.reject(new helpers.AnError());
 
-        assert.isRejected(pushBackends(fakeBackends, fakeSha1, config), helpers.AnError).notify(done);
+        assert.isRejected(pushBackends(fakeBackends, fakeSha1), helpers.AnError).notify(done);
     });
 
 });

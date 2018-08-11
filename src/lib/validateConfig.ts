@@ -3,6 +3,7 @@ import semver from 'semver';
 
 import * as errors from './errors';
 import npmWrapper from './commandWrappers/npmWrapper';
+import {Config, BackendConfig, Backend} from '@/types';
 
 export type PartialConfig = {
     [P in keyof Config]?: P extends 'backends' ? Array<InputPartialBackendConfig> : Config[P]

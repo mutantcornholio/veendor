@@ -5,13 +5,7 @@
  * @returns {string[]}
  */
 
-type JSONValue = string | number | boolean | JSONObject | JSONArray;
-
-interface JSONObject {
-    [x: string]: JSONValue;
-}
-
-interface JSONArray extends Array<JSONValue> {}
+import {JSONValue, JSONObject} from '@/serviceTypes';
 
 function isJSONObject(obj: JSONValue): obj is JSONObject {
     return obj !== null && typeof obj === 'object';

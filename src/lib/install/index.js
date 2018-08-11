@@ -10,7 +10,7 @@ const errors = require('../errors');
 const gitWrapper = require('../commandWrappers/gitWrapper');
 const npmWrapper = require('../commandWrappers/npmWrapper');
 const rsyncWrapper = require('../commandWrappers/rsyncWrapper');
-const pushBackends = require('./pushBackends');
+const pushBackends = require('./pushBackends').default;
 const helpers = require('./helpers');
 
 const nodeModules = path.resolve(process.cwd(), 'node_modules');
@@ -122,7 +122,7 @@ function install({force = false, config, rePull = false, rePullHash = null, lock
             .then(() => {
                     if (done) {
                         if (missingBackends.length > 0) {
-                            return pushBackends(missingBackends, newPkgJsonHash, config, rePull)
+                            return pushBackends(missingBackends, newPkgJsonHash, rePull)
                                 .catch(error => {
                                     if (error instanceof errors.RePullNeeded) {
                                         return install({
@@ -141,7 +141,7 @@ function install({force = false, config, rePull = false, rePullHash = null, lock
                         return;
                     }
 
-                    return pushBackends(config.backends, newPkgJsonHash, config, rePull)
+                    return pushBackends(config.backends, newPkgJsonHash, rePull)
                         .catch(error => {
                             if (error instanceof errors.RePullNeeded) {
                                 return install({

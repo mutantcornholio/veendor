@@ -1,5 +1,6 @@
 import validateConfig, {PartialConfig} from './validateConfig';
 import path from 'path';
+import {Config} from '@/types';
 
 function resolveConfig(explicitConfig: string): Promise<Config> {
     global.VEENDOR_VERSION = require('../../package.json').version;
