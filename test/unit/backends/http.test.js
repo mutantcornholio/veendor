@@ -9,9 +9,9 @@ const fsExtra = require('fs-extra');
 const assert = chai.assert;
 chai.use(chaiAsPromised);
 
-const httpBackend = require('../../../lib/backends/http');
-const tarWrapper = require('../../../lib/commandWrappers/tarWrapper');
-const errors = require('../../../lib/errors');
+const httpBackend = require('@/lib/backends/http');
+const tarWrapper = require('@/lib/commandWrappers/tarWrapper');
+const errors = require('@/lib/errors');
 const {
     checkMockResult,
     checkNock,

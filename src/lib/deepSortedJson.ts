@@ -4,13 +4,16 @@
  * @param {Object} jsonObject
  * @returns {string[]}
  */
-function deepSortedJson(jsonObject) {
-    const tmpObj = Object.create(null);
-    const result = [];
 
-    for (const i of Object.keys(jsonObject)) {
-        tmpObj[i] = jsonObject[i];
-    }
+import {JSONValue, JSONObject} from '@/serviceTypes';
+
+function isJSONObject(obj: JSONValue): obj is JSONObject {
+    return obj !== null && typeof obj === 'object';
+}
+
+function deepSortedJson(jsonObject: JSONObject): string[] {
+    const tmpObj = {...jsonObject};
+    const result = [];
 
     while (true) {
         const tmpObjkeys = Object.keys(tmpObj);
@@ -20,21 +23,24 @@ function deepSortedJson(jsonObject) {
         }
 
         for (const i of tmpObjkeys) {
-            if (tmpObj[i] instanceof Array) {
-                for (const [index, value] of tmpObj[i].entries()) {
+            const val: JSONValue = tmpObj[i];
+
+            if (val instanceof Array) {
+                for (const [index, value] of val.entries()) {
                     tmpObj[`${i}[${index}]`] = value;
                 }
-            } else if (tmpObj[i] !== null && typeof tmpObj[i] === 'object') {
-                const keys = Object.keys(tmpObj[i]);
+            } else if (isJSONObject(val)) {
+                const keys = Object.keys(val);
+
                 if (keys.length === 0) {
                     result.push(`${i}`);
                 } else {
                     for (const key of keys) {
-                        tmpObj[`${i}.${key}`] = tmpObj[i][key];
+                        tmpObj[`${i}.${key}`] = val[key];
                     }
                 }
             } else {
-                result.push(`${i}=${tmpObj[i]}`);
+                result.push(`${i}=${val}`);
             }
 
             delete tmpObj[i];
@@ -44,7 +50,4 @@ function deepSortedJson(jsonObject) {
     return result.sort();
 }
 
-// exporting as object to ease mocking in tests
-module.exports = {
-    transform: deepSortedJson,
-};
+export {deepSortedJson as transform};

@@ -8,9 +8,9 @@ const path = require('path');
 const assert = chai.assert;
 chai.use(chaiAsPromised);
 
-const local = require('../../../lib/backends/local');
-const tarWrapper = require('../../../lib/commandWrappers/tarWrapper');
-const errors = require('../../../lib/errors');
+const local = require('@/lib/backends/local');
+const tarWrapper = require('@/lib/commandWrappers/tarWrapper');
+const errors = require('@/lib/errors');
 
 let sandbox;
 let fakeHash;

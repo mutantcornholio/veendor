@@ -1,12 +1,9 @@
-'use strict';
+import validateConfig, {PartialConfig} from './validateConfig';
+import path from 'path';
+import {Config} from '@/types';
 
-const validateConfig = require('./validateConfig');
-const path = require('path');
-
-const version = require('../package.json').version;
-
-module.exports = function resolveConfig(explicitConfig) {
-    global.VEENDOR_VERSION = version;
+function resolveConfig(explicitConfig: string): Promise<Config> {
+    global.VEENDOR_VERSION = require('../../package.json').version;
 
     return new Promise(resolve => {
         let config;
@@ -18,7 +15,7 @@ module.exports = function resolveConfig(explicitConfig) {
 
         for (const location of configLocations) {
             try {
-                config = require(path.resolve(process.cwd(), location));
+                config = <PartialConfig>require(path.resolve(process.cwd(), location));
             } catch (e) {
                 if (e.code === 'MODULE_NOT_FOUND' && e.message.indexOf(location) !== -1) {
                     continue;
@@ -33,11 +30,13 @@ module.exports = function resolveConfig(explicitConfig) {
             process.exit(1);
         }
 
-        validateConfig(config).then(() => {
+        validateConfig(<PartialConfig>config).then(config => {
             resolve(config);
         }, error => {
             console.error(error.message);
             process.exit(1);
         });
     });
-};
+}
+
+export default resolveConfig;

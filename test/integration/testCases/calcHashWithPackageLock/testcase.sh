@@ -2,7 +2,7 @@
 
 set -x
 
-expected_hash="20c8a8f7a22105800b01d8d0cb6a3d169df0fcad-test"
+expected_hash="dea50c9ec128b9868367a5668dea082b906d3116-test"
 calc="$(node "$rootdir/bin/veendor.js" calc --debug)"
 
 if [[ "$calc" != "$expected_hash" ]]; then

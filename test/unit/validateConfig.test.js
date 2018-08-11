@@ -7,8 +7,8 @@ const sinon = require('sinon');
 const assert = chai.assert;
 chai.use(chaiAsPromised);
 
-const validateConfig = require('../../lib/validateConfig');
-const npmWrapper = require('../../lib/commandWrappers/npmWrapper');
+const validateConfig = require('@/lib/validateConfig').default;
+const npmWrapper = require('@/lib/commandWrappers/npmWrapper');
 const helpers = require('./helpers');
 const veendorVersion = require('../../package.json').version;
 
@@ -203,10 +203,16 @@ describe('validateConfig', function () {
         config.backends[0].options = {directory: '.'};
 
         validateConfig(config).then(() => {
-            assert.equal(config.backends[0].backend, require('../../lib/backends/local'));
+            assert.equal(config.backends[0].backend, require('@/lib/backends/local'));
         });
 
         done();
+    });
+
+    it('should throw if backend property is not defined', () => {
+        config.backends[0].backend = undefined;
+
+        return assert.isRejected(validateConfig(config), validateConfig.InvalidBackendError);
     });
 
     it('should throw InvalidNpmVersionError if npmVersion returns incompatible version', done => {

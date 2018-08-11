@@ -8,10 +8,10 @@ const path = require('path');
 const assert = chai.assert;
 chai.use(chaiAsPromised);
 
-const gitLfs = require('../../../lib/backends/git-lfs');
-const gitWrapper = require('../../../lib/commandWrappers/gitWrapper');
-const tarWrapper = require('../../../lib/commandWrappers/tarWrapper');
-const errors = require('../../../lib/errors');
+const gitLfs = require('@/lib/backends/git-lfs');
+const gitWrapper = require('@/lib/commandWrappers/gitWrapper');
+const tarWrapper = require('@/lib/commandWrappers/tarWrapper');
+const errors = require('@/lib/errors');
 
 const {notifyAssert, expectCalls} = require('../helpers');
 
@@ -47,7 +47,7 @@ describe('git-lfs', () => {
         sandbox.stub(gitWrapper, 'commit').resolves();
         sandbox.stub(gitWrapper, 'tag').resolves();
         sandbox.stub(gitWrapper, 'push').resolves();
-        sandbox.stub(gitWrapper, 'isGitRepo').resolves();
+        sandbox.stub(gitWrapper, 'isGitRepo').resolves(true);
         sandbox.stub(gitWrapper, 'resetToRemote').resolves();
         sandbox.stub(gitWrapper, 'isGitLfsAvailable').resolves();
         sandbox.stub(gitWrapper, 'lfsPull').resolves();
@@ -63,7 +63,7 @@ describe('git-lfs', () => {
     describe('.pull', () => {
         it('clones repo to cache directory if isn\'t already there', done => {
             gitWrapper.isGitRepo.restore();
-            sandbox.stub(gitWrapper, 'isGitRepo').rejects(gitWrapper.NotAGitRepoError);
+            sandbox.stub(gitWrapper, 'isGitRepo').resolves(false);
 
             const checkResult = expectCalls.bind(null, [{
                 spy: gitWrapper.clone,

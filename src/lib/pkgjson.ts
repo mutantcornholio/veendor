@@ -1,19 +1,22 @@
+import crypto from 'crypto';
+import * as errors from './errors';
+import * as deepSortedJson from './deepSortedJson';
+
+import {JSONObject} from '@/serviceTypes';
+import {PkgJson, PackageHashOptions} from '@/types';
+
 /**
  * package.json-related stuff
  */
-const crypto = require('crypto');
-
-const errors = require('./errors');
-const deepSortedJson = require('./deepSortedJson');
 
 /**
  * Calculates and returns hash of deps in package.json
- * @param  {Object} pkgJson
- * @param {null|Object} lockfileContents
- * @param  {Object} options
- * @return {string}
  */
-function calcHash(pkgJson, lockfileContents = null, options = {}) {
+export function calcHash(
+    pkgJson: PkgJson,
+    lockfileContents: JSONObject | null = null,
+    options: PackageHashOptions = {}
+) {
     const resultSha1 = crypto.createHash('sha1');
 
     let sortedDeps = deepSortedJson.transform({
@@ -40,7 +43,7 @@ function calcHash(pkgJson, lockfileContents = null, options = {}) {
     return result;
 }
 
-function parsePkgJson(pkgJsonString) {
+export function parsePkgJson(pkgJsonString: string): Promise<PkgJson> {
     return new Promise((resolve, reject) => {
         let pkgJson;
 
@@ -58,10 +61,4 @@ function parsePkgJson(pkgJsonString) {
     });
 }
 
-class EmptyPkgJsonError extends errors.VeendorError {}
-
-module.exports = {
-    calcHash,
-    parsePkgJson,
-    EmptyPkgJsonError,
-};
+export class EmptyPkgJsonError extends errors.VeendorError {}
