@@ -1,18 +1,11 @@
 'use strict';
 
-const tracer = require('tracer');
-const fs = require('fs');
-const path = require('path');
+import tracer, {Tracer} from 'tracer';
+import fs from 'fs';
 
-let loggerInstance;
+let loggerInstance: Tracer.Logger;
 
-module.exports = {
-    setLogger,
-    setDefaultLogger,
-    getLogger
-};
-
-function setDefaultLogger(fileLevel, consoleLevel) {
+export function setDefaultLogger(fileLevel: number, consoleLevel: number) {
     loggerInstance = tracer.colorConsole({
         format: '{{message}}',
         transport: function (data) {
@@ -38,12 +31,13 @@ function setDefaultLogger(fileLevel, consoleLevel) {
     });
 
     return loggerInstance;
+
 }
 
-function setLogger(logger) {
+export function setLogger(logger: Tracer.Logger) {
     loggerInstance = logger;
 }
 
-function getLogger() {
+export function getLogger() {
     return loggerInstance;
 }

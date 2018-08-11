@@ -1,6 +1,6 @@
-const errors = require('../errors');
-const getLogger = require('../logger').getLogger;
-const helpers = require('./helpers');
+import * as errors from '../errors';
+import {getLogger} from '../logger';
+import helpers from './helpers';
 
 module.exports = function pushBackends(backends, hash, config, rePull) {
     const logger = getLogger();
@@ -11,7 +11,7 @@ module.exports = function pushBackends(backends, hash, config, rePull) {
     if (pushingBackends.length === 0) {
         logger.info(`No backends with push: true found. Exiting`);
     }
-[]
+
     const dirPromises = pushingBackends.map(backend => {
         return helpers.createCleanCacheDir(backend);
     });
@@ -49,8 +49,9 @@ module.exports = function pushBackends(backends, hash, config, rePull) {
         }, error => {
             if (error instanceof errors.BundleAlreadyExistsError) {
                 if (!rePull) {
-                    logger.error(`Bundle '${hash}' already exists in remote repo! Re-pulling it`);
-                    throw new errors.RePullNeeded();
+                    const message = `Bundle '${hash}' already exists in remote repo! Re-pulling it`;
+                    logger.error(message);
+                    throw new errors.RePullNeeded(message);
                 }
             }
 

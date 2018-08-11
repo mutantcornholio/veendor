@@ -1,6 +1,6 @@
 import crypto from 'crypto';
-import errors from './errors';
-import deepSortedJson from './deepSortedJson';
+import * as errors from './errors';
+import * as deepSortedJson from './deepSortedJson';
 
 /**
  * package.json-related stuff
