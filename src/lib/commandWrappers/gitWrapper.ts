@@ -1,5 +1,5 @@
 import path from 'path';
-import helpers from './helpers';
+import * as helpers from './helpers';
 import * as errors from '../errors';
 import {getLogger} from '../logger';
 
@@ -43,39 +43,35 @@ export async function isGitLfsAvailable() {
 /**
  * Returns contents of older revision of files
  * age == 1 means latest revision, age == 2 means previous, and so on
- * @param {string} gitDirectory
- * @param {Array<string|null>} filenames
- * @param {number} age
- * @returns {Promise}
  */
-export async function olderRevision<T extends (string | null), K extends keyof T>(
-    gitDirectory: string, filenames: T[], age: number
-): Promise<T[K]> {
+export async function olderRevision(
+    gitDirectory: string, filenames: Array<string | null>, age: number
+): Promise<Array<string | null>> {
     const relativeFilenames = filenames.map(filename => {
         return typeof filename === 'string' ? path.relative(gitDirectory, filename): null;
     });
 
-    return helpers
-        .getOutput('git', ['--no-pager', 'log', `-${age}`, '--pretty=format:%h'].concat(
-            relativeFilenames.filter(filename => filename !== null) as string[]
-        ))
-        .then(revisionsStr => {
-            const revisions = revisionsStr.trim().split('\n');
-            if (revisions.length < age) {
-                throw new TooOldRevisionError();
-            } else {
-                return Promise.all(relativeFilenames.map(filename => {
-                    if (filename === null) {
-                        return Promise.resolve(null);
-                    }
+    const gitArgs = ['--no-pager', 'log', `-${age}`, '--pretty=format:%h'].concat(
+        relativeFilenames.filter(filename => typeof filename === 'string') as string[]
+    );
 
-                    return helpers.getOutput(
-                        'git',
-                        ['--no-pager', 'show', revisions[revisions.length - 1] + ':' + filename]
-                    );
-                }));
-            }
-        });
+    const revisionsText = await helpers.getOutput('git', gitArgs);
+    const revisions = revisionsText.trim().split('\n');
+
+    if (revisions.length < age) {
+        throw new TooOldRevisionError();
+    }
+
+    return Promise.all(relativeFilenames.map(filename => {
+        if (typeof filename === 'string') {
+            return helpers.getOutput(
+                'git',
+                ['--no-pager', 'show', revisions[revisions.length - 1] + ':' + filename]
+            );
+        } else {
+            return Promise.resolve(null);
+        }
+    }));
 }
 
 export async function clone(repo: string, directory: string) {

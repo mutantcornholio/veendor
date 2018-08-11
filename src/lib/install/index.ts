@@ -3,8 +3,8 @@
 import {getLogger} from '@/lib/logger';
 import * as helpers from './helpers';
 import pushBackends from './pushBackends';
-import rsyncWrapper from '@/lib/commandWrappers/rsyncWrapper';
-import npmWrapper from '@/lib/commandWrappers/npmWrapper';
+import * as rsyncWrapper from '@/lib/commandWrappers/rsyncWrapper';
+import * as npmWrapper from '@/lib/commandWrappers/npmWrapper';
 import * as gitWrapper from '@/lib/commandWrappers/gitWrapper';
 import * as errors from '@/lib/errors';
 import _ from 'lodash';

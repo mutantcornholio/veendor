@@ -1,25 +1,26 @@
-'use strict';
+import path from 'path';
+import fs from 'fs';
+import fsExtra from 'fs-extra';
+import * as tarWrapper from '../commandWrappers/tarWrapper';
+import * as errors from '../errors';
+import {Compression} from '../commandWrappers/tarWrapper';
 
-const path = require('path');
-const fs = require('fs');
-const fsExtra = require('fs-extra');
+type LocalOptions = {
+    compression: Compression,
+    directory: string,
+}
 
-const tarWrapper = require('../commandWrappers/tarWrapper');
-const errors = require('../errors');
-
-module.exports = {
-    validateOptions,
-    pull,
-    push
-};
-
-function validateOptions(options) {
+export function validateOptions(options: Partial<LocalOptions>) {
     if (options.compression && !(options.compression in tarWrapper.compression)) {
         throw new errors.InvalidOptionsError(`Invalid compression: ${options.compression}`);
     }
 
     if (!options.compression) {
         options.compression = 'gzip';
+    }
+
+    if (typeof options.directory !== 'string') {
+        throw new errors.InvalidOptionsError(`Invalid directory '${options.directory}'`);
     }
 
     try {
@@ -29,7 +30,7 @@ function validateOptions(options) {
     }
 }
 
-function pull(hash, options) {
+export function pull(hash: string, options: LocalOptions) {
     const archivePath = path.resolve(
         options.directory,
         `${hash}.tar${tarWrapper.compression[options.compression]}`
@@ -43,7 +44,7 @@ function pull(hash, options) {
         })
 }
 
-function push(hash, options) {
+export function push(hash: string, options: LocalOptions) {
     const archivePath = path.resolve(
         options.directory,
         `${hash}.tar${tarWrapper.compression[options.compression]}`

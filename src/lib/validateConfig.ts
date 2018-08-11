@@ -2,7 +2,7 @@ import _ from 'lodash';
 import semver from 'semver';
 
 import * as errors from './errors';
-import npmWrapper from './commandWrappers/npmWrapper';
+import * as npmWrapper from './commandWrappers/npmWrapper';
 import {Config, BackendConfig, Backend} from '@/types';
 
 export type PartialConfig = {

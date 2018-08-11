@@ -1,19 +1,12 @@
-'use strict';
+import * as helpers from './helpers';
 
-const helpers = require('./helpers');
-
-function syncDirs(from, to) {
+export function syncDirs(from: string, to: string) {
     return helpers.getOutput('rsync', ['-az', '--delete', from, to]);
 }
 
-function rsyncAvailable() {
+export function rsyncAvailable(): Promise<boolean> {
     return new Promise((resolve) => {
         helpers.getOutput('which', ['rsync'])
             .then(() => resolve(true), () => resolve(false))
     });
 }
-
-module.exports = {
-    syncDirs,
-    rsyncAvailable,
-};

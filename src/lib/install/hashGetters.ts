@@ -25,7 +25,7 @@ export async function getHistoryHash(
             originalCwd, [pkgJsonPath, lockfilePath], currentHistoryIndex
         );
 
-        const pkgJson = await pkgJsonUtils.parsePkgJson(pkgJsonString);
+        const pkgJson = await pkgJsonUtils.parsePkgJson(<string>pkgJsonString);
         const lockfileContents = typeof lockfileString === 'string' ? JSON.parse(lockfileString) : null;
 
         const hash = pkgJsonUtils.calcHash(pkgJson, lockfileContents, config.packageHash);

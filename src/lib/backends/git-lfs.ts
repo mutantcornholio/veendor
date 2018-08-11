@@ -1,21 +1,23 @@
-'use strict';
+import path from 'path';
+import fsExtra from 'fs-extra';
+import * as gitWrapper from '../commandWrappers/gitWrapper';
+import * as tarWrapper from '../commandWrappers/tarWrapper';
+import * as errors from '../errors';
+import {Compression} from '@/lib/commandWrappers/tarWrapper';
 
-const path = require('path');
-const fsExtra = require('fs-extra');
+export const keepCache = true;
 
-const gitWrapper = require('../commandWrappers/gitWrapper');
-const tarWrapper = require('../commandWrappers/tarWrapper');
-const errors = require('../errors');
+export let _remoteIsFresh: false; // Exporting this for tests
 
-module.exports = {
-    _remoteIsFresh: false, // Exporting this for tests
-    keepCache: true,
-    validateOptions,
-    pull,
-    push
-};
 
-function validateOptions(options) {
+type GitLfsOptions = {
+    compression: Compression,
+    repo: string,
+    defaultBranch: string,
+    checkLfsAvailability: boolean,
+}
+
+export function validateOptions(options: Partial<GitLfsOptions>) {
     return new Promise((resolve, reject) => {
         if (typeof options.repo !== 'string' || options.repo.length === 0) {
             return reject(new errors.InvalidOptionsError('Invalid git repo'));
@@ -44,7 +46,7 @@ function validateOptions(options) {
                 ));
             }
 
-            if (options.checkLfsAvailability === true) {
+            if (options.checkLfsAvailability) {
                 gitWrapper.isGitLfsAvailable().then(resolve, () => {
                     reject(new gitWrapper.GitLfsNotAvailableError(
                         'git-lfs is not available. Check git-lfs.github.com for docs.'
@@ -55,7 +57,7 @@ function validateOptions(options) {
     });
 }
 
-function pull(hash, options, cacheDir) {
+export function pull(hash: string, options: GitLfsOptions, cacheDir: string) {
     const repoDir = path.resolve(cacheDir, 'repo');
     return gitWrapper.isGitRepo(repoDir)
         .then(res => {
@@ -97,7 +99,7 @@ function pull(hash, options, cacheDir) {
         });
 }
 
-function push(hash, options, cacheDir) {
+export function push(hash, options, cacheDir) {
     const repoDir = path.resolve(cacheDir, 'repo');
     const archivePath = path.resolve(
         repoDir,
