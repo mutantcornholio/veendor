@@ -1,4 +1,4 @@
-const {transform} = require('../../lib/deepSortedJson');
+const {transform} = require('@/lib/deepSortedJson');
 const assert = require('chai').assert;
 
 describe('transform', () => {

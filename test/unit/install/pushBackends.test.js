@@ -5,9 +5,9 @@ const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
 const tracer = require('tracer');
 
-const pushBackends = require('../../../lib/install/pushBackends');
-const errors = require('../../../lib/errors');
-const logger = require('../../../lib/logger');
+const pushBackends = require('@/lib/install/pushBackends');
+const errors = require('@/lib/errors');
+const logger = require('@/lib/logger');
 const helpers = require('../helpers');
 
 const assert = chai.assert;

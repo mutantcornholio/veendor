@@ -13,7 +13,8 @@ create_empty_repo () {
     rm -rf repolocal
 }
 
-rootdir="$(pwd)"
+rootdir="$(pwd)/dist"
+testdir="$(pwd)/test"
 dirname="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 testcase="$1"
 tmpdir="$2"
@@ -22,7 +23,7 @@ node_version="$4"
 npm_version="$5"
 
 export npm_config_prefix=
-export NVM_DIR="${rootdir}/nvm"
+export NVM_DIR="$(pwd)/nvm"
 
 rm -rf "${tmpdir}"
 mkdir -p "${tmpdir}"

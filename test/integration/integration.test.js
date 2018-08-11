@@ -11,8 +11,8 @@ const path = require('path');
 const AWS = require('aws-sdk');
 const S3rver = require('s3rver');
 
-const helpers = require('../../lib/commandWrappers/helpers');
-const {getTmpDir} = require('../../lib/install/helpers');
+const helpers = require('@/lib/commandWrappers/helpers');
+const {getTmpDir} = require('@/lib/install/helpers');
 
 chai.use(chaiAsPromised);
 

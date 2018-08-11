@@ -7,8 +7,8 @@ const chaiAsPromised = require('chai-as-promised');
 const assert = chai.assert;
 chai.use(chaiAsPromised);
 
-const gitWrapper = require('../../lib/commandWrappers/gitWrapper');
-const helpers = require('../../lib/commandWrappers/helpers');
+const gitWrapper = require('@/lib/commandWrappers/gitWrapper');
+const helpers = require('@/lib/commandWrappers/helpers');
 const {notifyAssert, AnError} = require('./helpers');
 
 let config;

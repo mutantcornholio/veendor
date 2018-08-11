@@ -8,10 +8,10 @@ const path = require('path');
 const assert = chai.assert;
 chai.use(chaiAsPromised);
 
-const gitLfs = require('../../../lib/backends/git-lfs');
-const gitWrapper = require('../../../lib/commandWrappers/gitWrapper');
-const tarWrapper = require('../../../lib/commandWrappers/tarWrapper');
-const errors = require('../../../lib/errors');
+const gitLfs = require('@/lib/backends/git-lfs');
+const gitWrapper = require('@/lib/commandWrappers/gitWrapper');
+const tarWrapper = require('@/lib/commandWrappers/tarWrapper');
+const errors = require('@/lib/errors');
 
 const {notifyAssert, expectCalls} = require('../helpers');
 

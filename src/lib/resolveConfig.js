@@ -3,7 +3,7 @@
 const validateConfig = require('./validateConfig');
 const path = require('path');
 
-const version = require('../package.json').version;
+const version = require('../../package.json').version;
 
 module.exports = function resolveConfig(explicitConfig) {
     global.VEENDOR_VERSION = version;

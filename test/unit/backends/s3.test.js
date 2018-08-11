@@ -10,9 +10,9 @@ const AWS = require('aws-sdk');
 const assert = chai.assert;
 chai.use(chaiAsPromised);
 
-const s3Backend = require('../../../lib/backends/s3');
-const tarWrapper = require('../../../lib/commandWrappers/tarWrapper');
-const errors = require('../../../lib/errors');
+const s3Backend = require('@/lib/backends/s3');
+const tarWrapper = require('@/lib/commandWrappers/tarWrapper');
+const errors = require('@/lib/errors');
 const {
     AWSError,
     AnError,

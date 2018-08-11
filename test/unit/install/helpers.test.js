@@ -13,7 +13,7 @@ chai.use(chaiAsPromised);
 
 const helpers = require('../helpers');
 
-const {createCleanCacheDir} = require('../../../lib/install/helpers');
+const {createCleanCacheDir} = require('@/lib/install/helpers');
 
 const FAKE_HASH = '1234567890deadbeef1234567890';
 

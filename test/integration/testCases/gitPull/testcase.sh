@@ -7,7 +7,7 @@ export TEST_REPO_DIR="$(pwd)/repo"
 
 git clone "$(pwd)/repo" repolocal
 cd repolocal
-cp "$rootdir/test/integration/bundles/7d0db335c82dfd9aa2b96dabc485b89ebaa1496f.tar.gz" .
+cp "$testdir/integration/bundles/7d0db335c82dfd9aa2b96dabc485b89ebaa1496f.tar.gz" .
 git add 7d0db335c82dfd9aa2b96dabc485b89ebaa1496f.tar.gz
 git commit -m "7d0db335c82dfd9aa2b96dabc485b89ebaa1496f.tar.gz"
 git tag veendor-7d0db335c82dfd9aa2b96dabc485b89ebaa1496f

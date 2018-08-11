@@ -2,14 +2,15 @@
   "name": "veendor",
   "version": "2.1.0",
   "description": "a tool for stroing your npm dependencies in arbitraty storage",
-  "main": "bin/veendor.js",
+  "main": "dist/bin/veendor.js",
   "bin": {
-    "veendor": "./bin/veendor.js"
+    "veendor": "./dist/bin/veendor.js"
   },
   "scripts": {
     "test": "mocha --file test/setup.js --reporter dot 'test/**/*.test.js'",
     "test_unit": "mocha --file test/setup.js --reporter dot 'test/unit/**/*.test.js'",
-    "test_integration": "mocha --file test/setup.js --reporter dot 'test/integration/**/*.test.js'"
+    "test_integration": "mocha --file test/setup.js --reporter dot 'test/integration/**/*.test.js'",
+    "postinstall": "ln -snf ../dist node_modules/@"
   },
   "repository": {
     "type": "git",
@@ -31,6 +32,7 @@
     "tracer": "^0.8.9"
   },
   "devDependencies": {
+    "@types/node": "^10.5.8",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
     "mocha": "^5.0.5",
@@ -38,6 +40,7 @@
     "mock-require": "^1.3.0",
     "nock": "^9.2.3",
     "s3rver": "^2.2.3",
-    "sinon": "^4.4.8"
+    "sinon": "^4.4.8",
+    "typescript": "^3.0.1"
   }
 }

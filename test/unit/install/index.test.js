@@ -7,13 +7,13 @@ const fsExtra = require('fs-extra');
 const path = require('path');
 const _ = require('lodash');
 
-const install = require('../../../lib/install');
-const installHelpers = require('../../../lib/install/helpers');
-const pkgJson = require('../../../lib/pkgjson');
-const gitWrapper = require('../../../lib/commandWrappers/gitWrapper');
-const npmWrapper = require('../../../lib/commandWrappers/npmWrapper');
-const rsyncWrapper = require('../../../lib/commandWrappers/rsyncWrapper');
-const errors = require('../../../lib/errors');
+const install = require('@/lib/install');
+const installHelpers = require('@/lib/install/helpers');
+const pkgJson = require('@/lib/pkgjson');
+const gitWrapper = require('@/lib/commandWrappers/gitWrapper');
+const npmWrapper = require('@/lib/commandWrappers/npmWrapper');
+const rsyncWrapper = require('@/lib/commandWrappers/rsyncWrapper');
+const errors = require('@/lib/errors');
 const helpers = require('../helpers');
 
 const assert = chai.assert;

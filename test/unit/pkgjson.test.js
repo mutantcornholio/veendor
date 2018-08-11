@@ -4,8 +4,8 @@ const sinon = require('sinon');
 const crypto = require('crypto');
 const _ = require('lodash');
 
-const pkgjson = require('../../lib/pkgjson');
-const deepSortedJson = require('../../lib/deepSortedJson');
+const pkgjson = require('@/lib/pkgjson');
+const deepSortedJson = require('@/lib/deepSortedJson');
 
 describe('pkgjson', () => {
     describe('#calcHash', () => {
