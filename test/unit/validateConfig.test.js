@@ -23,7 +23,7 @@ describe('validateConfig', function () {
 
         sandbox = sinon.sandbox.create();
 
-        global.VEENDOR_VERSION = veendorVersion;
+        VEENDOR_VERSION = veendorVersion;
     });
 
     afterEach(() => {
@@ -209,6 +209,12 @@ describe('validateConfig', function () {
         done();
     });
 
+    it('should throw if backend property is not defined', () => {
+        config.backends[0].backend = undefined;
+
+        return assert.isRejected(validateConfig(config), validateConfig.InvalidBackendError);
+    });
+
     it('should throw InvalidNpmVersionError if npmVersion returns incompatible version', done => {
         sandbox.stub(npmWrapper, 'version').returns(Promise.resolve('5.4.3'));
 
@@ -226,14 +232,14 @@ describe('validateConfig', function () {
     });
 
     it('should throw InvalidVeendorVersionError if veendor does not comply with veendorVersion constraint', done => {
-        global.VEENDOR_VERSION = '2.0.0';
+        VEENDOR_VERSION = '2.0.0';
         config.veendorVersion = '>2.1.0';
 
         assert.isRejected(validateConfig(config), validateConfig.InvalidVeendorVersionError).notify(done);
     });
 
     it('should resolve, if veendor version is compatible', done => {
-        global.VEENDOR_VERSION = '2.0.0';
+        VEENDOR_VERSION = '2.0.0';
         config.veendorVersion = '^2';
 
         assert.isFulfilled(validateConfig(config)).notify(done);

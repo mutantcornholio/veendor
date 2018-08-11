@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/mutantcornholio/veendor",
   "dependencies": {
+    "@types/fs-extra": "^5.0.4",
     "aws-sdk": "^2.213.1",
     "commander": "^2.16.0",
     "deep-object-diff": "^1.0.4",
@@ -32,7 +33,9 @@
     "tracer": "^0.8.9"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.116",
     "@types/node": "^10.5.8",
+    "@types/semver": "^5.5.0",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
     "mocha": "^5.0.5",

@@ -1,12 +1,20 @@
-'use strict';
+import _ from 'lodash';
+import semver from 'semver';
 
-const _ = require('lodash');
-const semver = require('semver');
+import errors from './errors';
+import npmWrapper from './commandWrappers/npmWrapper';
 
-const errors = require('./errors');
-const npmWrapper = require('./commandWrappers/npmWrapper');
+type PartialConfig = {
+    [P in keyof Config]?: P extends 'backends' ? Array<InputPartialBackendConfig> : Config[P]
+}
 
-module.exports = function validateConfig(config) {
+type InputPartialBackendConfig = {
+    [P in keyof BackendConfig]?: P extends 'backend' ? string | PartialBackend | any : BackendConfig[P] | any
+}
+
+type PartialBackend = Partial<Backend>;
+
+module.exports = function validateConfig(config: PartialConfig) {
     const validationPromises = [];
 
     if (!(config.backends instanceof Array) || config.backends.length === 0) {
@@ -20,10 +28,6 @@ module.exports = function validateConfig(config) {
     }
 
     for (const [position, backend] of config.backends.entries()) {
-        if (typeof backend.backend === 'string') {
-            backend.backend = require(`./backends/${backend.backend}`);
-        }
-
         validationPromises.push(validateBackend(backend, position));
     }
 
@@ -59,19 +63,20 @@ module.exports = function validateConfig(config) {
         }
     }
 
-    if (config.npmVersion !== undefined) {
+    if (typeof config.npmVersion === 'string') {
+        const npmVersion = config.npmVersion;
         validationPromises.push(
             npmWrapper.version()
                 .then(version => {
-                    if (!semver.satisfies(version, config.npmVersion)) {
-                        throw new InvalidNpmVersionError(config.npmVersion, version);
+                    if (!semver.satisfies(version, npmVersion)) {
+                        throw new InvalidNpmVersionError(npmVersion, version);
                     }
                 })
         );
     }
 
     if (config.veendorVersion !== undefined) {
-        if (!semver.satisfies(global.VEENDOR_VERSION, config.veendorVersion)) {
+        if (!semver.satisfies(VEENDOR_VERSION, config.veendorVersion)) {
             return Promise.reject(new InvalidVeendorVersionError(config.veendorVersion));
         }
     }
@@ -79,43 +84,49 @@ module.exports = function validateConfig(config) {
     return Promise.all(validationPromises);
 };
 
-function validateBackend(backend, position) {
-    if (!(typeof backend.alias === 'string' && backend.alias.length > 0)) {
+function validateBackend(backendConfig: InputPartialBackendConfig, position: number) {
+    if (!(typeof backendConfig.alias === 'string' && backendConfig.alias.length > 0)) {
         return Promise.reject(new EmptyBackendAliasError(position));
     }
 
-    if (typeof backend.backend.pull !== 'function') {
-        return Promise.reject(new InvalidBackendError(backend.alias, 'pull'));
+    if (typeof backendConfig.backend === 'string') {
+        backendConfig.backend = require(`./backends/${backendConfig.backend}`);
+    } else if (!(backendConfig.backend instanceof Object)) {
+        return Promise.reject(new InvalidBackendError(backendConfig.alias, 'backend'));
     }
 
-    if (typeof backend.backend.push !== 'function') {
-        return Promise.reject(new InvalidBackendError(backend.alias, 'push'));
+    if (typeof backendConfig.backend.pull !== 'function') {
+        return Promise.reject(new InvalidBackendError(backendConfig.alias, 'pull'));
     }
 
-    if (typeof backend.backend.validateOptions !== 'function') {
-        return Promise.reject(new InvalidBackendError(backend.alias, 'validateOptions'));
+    if (typeof backendConfig.backend.push !== 'function') {
+        return Promise.reject(new InvalidBackendError(backendConfig.alias, 'push'));
     }
 
-    if (backend.push === undefined) {
-        backend.push = false;
+    if (typeof backendConfig.backend.validateOptions !== 'function') {
+        return Promise.reject(new InvalidBackendError(backendConfig.alias, 'validateOptions'));
     }
 
-    if (typeof backend.push !== 'boolean') {
-        return Promise.reject(new InvalidBackendOptionError(backend.alias, 'push'));
+    if (backendConfig.push === undefined) {
+        backendConfig.push = false;
     }
 
-    if (backend.pushMayFail === undefined) {
-        backend.pushMayFail = false;
+    if (typeof backendConfig.push !== 'boolean') {
+        return Promise.reject(new InvalidBackendOptionError(backendConfig.alias, 'push'));
     }
 
-    if (typeof backend.pushMayFail !== 'boolean') {
-        return Promise.reject(new InvalidBackendOptionError(backend.alias, 'pushMayFail'));
+    if (backendConfig.pushMayFail === undefined) {
+        backendConfig.pushMayFail = false;
+    }
+
+    if (typeof backendConfig.pushMayFail !== 'boolean') {
+        return Promise.reject(new InvalidBackendOptionError(backendConfig.alias, 'pushMayFail'));
     }
 
     let validationResult;
 
     try {
-        validationResult = backend.backend.validateOptions(backend.options);
+        validationResult = backendConfig.backend.validateOptions(backendConfig.options);
     } catch (e) {
         return Promise.reject(e);
     }
@@ -134,32 +145,32 @@ class EmptyBackendsPropertyError extends errors.VeendorError {
 }
 
 class InvalidBackendError extends errors.VeendorError {
-    constructor(alias, field) {
+    constructor(alias: string, field: string) {
         super(`backend '${alias}' has lacks of has invalid '${field}' field`);
     }
 }
 
 class InvalidBackendOptionError extends errors.VeendorError {
-    constructor(alias, field) {
+    constructor(alias: string, field: string) {
         super(`backend\'s '${alias}' '${field}' option in invalid`);
     }
 }
 
 class EmptyBackendAliasError extends errors.VeendorError {
-    constructor(position) {
+    constructor(position: number) {
         super(`backend at position '${position}' lacks or has invalid 'alias' field`);
     }
 }
 
 class InvalidNpmVersionError extends errors.VeendorError {
-    constructor(expected, actual) {
+    constructor(expected: string, actual: string) {
         super(`npm version '${actual}' does not comply with '${expected}' constraint`);
     }
 }
 
 class InvalidVeendorVersionError extends errors.VeendorError {
-    constructor(expected) {
-        super(`veendor version '${global.VEENDOR_VERSION}' does not comply with '${expected}' constraint`);
+    constructor(expected: string) {
+        super(`veendor version '${VEENDOR_VERSION}' does not comply with '${expected}' constraint`);
     }
 }
 
