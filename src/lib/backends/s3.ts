@@ -131,51 +131,59 @@ export async function pull(hash: string, options: S3Options, _cachedir: string, 
     return Promise.all([downloadStreamPromise, extractPromise]);
 }
 
-export function push(hash: string, options: S3Options, _cachedir: string, toolsProvider: BackendToolsProvider) {
+export async function push(hash: string, options: S3Options, _cachedir: string, toolsProvider: BackendToolsProvider) {
     const filename = `${hash}.tar${tarWrapper.compression[options.compression]}`;
     const s3 = options.__s3;
 
     const controlToken: ControlToken = {};
 
-    const {stream, promise} = tarWrapper
-        .createStreamArchive([path.resolve(process.cwd(), 'node_modules')], options.compression, {controlToken});
+    let bundleExists = false;
+    try {
+        await s3.headObject({
+            Bucket: options.bucket,
+            Key: filename,
+        }).promise();
+        bundleExists = true;
+    } catch (error) {
+        if (error.statusCode !== 404) {
+            throw error;
+        }
+    }
+
+    if (bundleExists) {
+        throw new errors.BundleAlreadyExistsError();
+    }
 
     const progressStream = toolsProvider.getProgressStream('push');
+    progressStream.toggleVisibility(true);
 
-    setTimeout(() => progressStream.toggleVisibility(true), 500);
+    const {stream: tarWrapperStream, promise: tarWrapperPromise} = tarWrapper
+        .createStreamArchive([path.resolve(process.cwd(), 'node_modules')], options.compression, {controlToken});
 
-    stream.pipe(progressStream);
-    return s3.headObject({
+    tarWrapperStream.pipe(progressStream);
+
+    const s3Promise = s3.upload({
         Bucket: options.bucket,
         Key: filename,
-    }).promise()
-        .then(() => {
-            throw new errors.BundleAlreadyExistsError();
-        }, error => {
-            if (error.statusCode === 404) {
-                return s3.upload({
-                    Bucket: options.bucket,
-                    Key: filename,
-                    ACL: options.objectAcl,
-                    Body: progressStream,
-                }).promise().then(() => promise);
-            }
+        ACL: options.objectAcl,
+        Body: progressStream,
+    }).promise();
 
+    try {
+        await Promise.all([tarWrapperPromise, s3Promise]);
+    } catch (error) {
+        if (error instanceof errors.VeendorError) {
             throw error;
-        })
-        .catch(error => {
-            if (controlToken.terminate !== undefined) {
-                controlToken.terminate();
-            }
+        }
 
-            progressStream.die();
+        throw new BundleUploadError(`${error.statusCode}: ${error.message}`);
+    } finally {
+        if (controlToken.terminate !== undefined) {
+            controlToken.terminate();
+        }
 
-            if (error instanceof errors.VeendorError) {
-                throw error;
-            }
-
-            throw new BundleUploadError(`${error.statusCode}: ${error.message}`);
-        });
+        progressStream.die();
+    }
 }
 
 export class BundleDownloadError extends errors.VeendorError {}

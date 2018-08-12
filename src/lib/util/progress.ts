@@ -25,15 +25,20 @@ export class ProgressStream extends Transform {
 
         this.haveTotal = typeof this.total === 'number';
 
-        const progressWithTotal = `  ${colors.green(title)} [{bar}]  `
-            + `${colors.gray('{_value} / {_total} Mb')}   {percentage}%   {duration_formatted}`;
+        const progressWithTotal = rigthPad(2000, `  ${colors.green(title)} [{bar}]  `
+            + `${colors.gray('{_value} / {_total} Mb')}   {percentage}%   {duration_formatted}`);
 
-        const progressWithoutTotal = `  ${colors.green(title)} ${colors.gray('{_value} Mb')}   {duration_formatted}`;
+        const progressWithoutTotal = rigthPad(2000, `  ${colors.green(title)} ${colors.gray('{_value} Mb')}` +
+            `   {duration_formatted}`);
 
         this.progress = new cliProgress.Bar({
             format: this.haveTotal ? progressWithTotal : progressWithoutTotal,
             barsize: 40,
             etaBuffer: 50,
+            hideCursor: false,
+            clearOnComplete: true,
+            linewrap: false,
+            fps: 50,
         });
 
         this.completed = 0;
@@ -142,6 +147,12 @@ function leftPad(width: number, str: string): string {
     // https://stackoverflow.com/questions/5366849/convert-1-to-0001-in-javascript
     // @ts-ignore
     return Array(width).join(' ').substring(' ', width - str.length) + str;
+}
+
+function rigthPad(width: number, str: string): string {
+    // https://stackoverflow.com/questions/5366849/convert-1-to-0001-in-javascript
+    // @ts-ignore
+    return str + Array(width).join(' ').substring(' ', width - str.length);
 }
 
 const allTokens: ProgressContolToken[] = [];

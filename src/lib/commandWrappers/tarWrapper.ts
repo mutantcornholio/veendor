@@ -4,6 +4,7 @@ import {Readable} from 'stream';
 import * as errors from '../errors';
 import * as helpers from './helpers';
 import {ControlToken} from './helpers';
+import {StdioPolicy} from '@/lib/commandWrappers/helpers';
 
 
 export type Compression = 'gzip'| 'bzip2' | 'xz'
@@ -26,13 +27,13 @@ export function createArchive(outPath: string, inputPaths: string[], compression
         ...pathsToAdd
     ];
 
-    return helpers.getOutput('tar', args, {cwd: baseDir, pipeToParent: true});
+    return helpers.getOutput('tar', args, {cwd: baseDir, stdout: StdioPolicy.copy, stderr: StdioPolicy.inherit});
 }
 
 export function extractArchive(archive: string) {
     const args = ['--extract', '--file', archive];
 
-    return helpers.getOutput('tar', args, {pipeToParent: true});
+    return helpers.getOutput('tar', args, {stdout: StdioPolicy.copy, stderr: StdioPolicy.inherit});
 }
 
 class ControlTokenError extends errors.VeendorError {}
@@ -51,7 +52,7 @@ export function createStreamArchive(
     ];
 
     const procPromise = helpers.getOutput(
-        'tar', args, {pipeToParent: false, controlToken, collectOutput: false}
+        'tar', args, {stdout: StdioPolicy.pipe, stderr: StdioPolicy.pipe, controlToken}
     );
 
     if (!controlToken.stdio) {
@@ -67,7 +68,9 @@ export function createStreamArchive(
 export function extractArchiveFromStream(archiveStream: Readable, {controlToken = {}}: {controlToken: ControlToken}) {
     const args = ['--extract', '--file', '-'];
 
-    const procPromise = helpers.getOutput('tar', args, {pipeToParent: false, controlToken, collectOutput: false});
+    const procPromise = helpers.getOutput('tar', args, {
+        stdout: StdioPolicy.pipe, stderr: StdioPolicy.pipe, controlToken
+    });
     if (controlToken.stdio) {
         archiveStream.pipe(controlToken.stdio[0]);
         return procPromise;

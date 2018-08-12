@@ -203,7 +203,7 @@ describe('s3 backend', () => {
                 .catch(() => s3Mock.verify());
         });
 
-        it('should with BundleAlreadyExistsError is object exists', () => {
+        it('should reject with BundleAlreadyExistsError is object exists', () => {
             fakeS3HeadResultPromise = Promise.resolve({
                 AcceptRanges: 'bytes',
                 LastModified: new Date(),

@@ -159,11 +159,10 @@ describe('veendor', function () {
 });
 
 function runBashTest(testCase) {
-    return executeBashTest(testCase, _.cloneDeep(NODE_VERSIONS));
-}
+    const testPromises = [];
+    const remainingVersions = _.cloneDeep(NODE_VERSIONS);
 
-function executeBashTest(testCase, remainingVersions) {
-    return new Promise((resolve, reject) => {
+    while (remainingVersions.length !== 0) {
         const nodeVersion = remainingVersions[0].nodeVersion;
         const npmVersion = remainingVersions[0].npmVersions[0];
 
@@ -173,10 +172,16 @@ function executeBashTest(testCase, remainingVersions) {
             remainingVersions[0].npmVersions.shift();
         }
 
+        testPromises.push(executeBashTest(testCase, nodeVersion, npmVersion));
+    }
+    return Promise.all(testPromises);
+}
+
+function executeBashTest(testCase, nodeVersion, npmVersion) {
+    return new Promise((resolve, reject) => {
         const testDir = path.resolve(
             process.cwd(), 'tmp', 'test', 'integration', testCase, `${nodeVersion}-${npmVersion}`
         );
-
 
         const tmpDir = os.tmpdir();
         const cwdHash = crypto.createHash('sha1');
@@ -187,13 +192,9 @@ function executeBashTest(testCase, remainingVersions) {
             .getOutput(
                 'bash',
                 [TEST_SCRIPT, testCase, testDir, cacheDir, nodeVersion, npmVersion],
-                {timeoutDuration: 20000}
+                {timeoutDuration: 40000}
             ).then(() => {
-                if (remainingVersions.length === 0) {
                     resolve();
-                } else {
-                    return executeBashTest(testCase, remainingVersions).then(resolve, reject);
-                }
             }, error => {
                 if (error.output) {
                     const outPath = path.resolve(testDir, 'output.txt');

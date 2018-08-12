@@ -1,5 +1,6 @@
 import path from 'path';
 import * as helpers from './helpers';
+import {StdioPolicy} from './helpers';
 import * as errors from '../errors';
 import {getLogger} from '../util/logger';
 
@@ -75,14 +76,20 @@ export async function olderRevision(
 }
 
 export async function clone(repo: string, directory: string) {
-    return helpers.getOutput('git', ['clone', repo, directory], {pipeToParent: true});
+    return helpers.getOutput('git', ['clone', repo, directory], {
+        stdout: StdioPolicy.copy, stderr: StdioPolicy.inherit
+    });
 }
 export async function fetch(gitDirectory: string) {
-    return helpers.getOutput('git', ['fetch', '--tags'], {cwd: gitDirectory, pipeToParent: true});
+    return helpers.getOutput('git', ['fetch', '--tags'], {
+        cwd: gitDirectory, stdout: StdioPolicy.copy, stderr: StdioPolicy.inherit
+    });
 }
 
 export async function lfsPull(gitDirectory: string) {
-    return helpers.getOutput('git', ['lfs', 'pull'], {cwd: gitDirectory, pipeToParent: true});
+    return helpers.getOutput('git', ['lfs', 'pull'], {
+        cwd: gitDirectory, stdout: StdioPolicy.copy, stderr: StdioPolicy.inherit
+    });
 }
 
 export async function checkout(gitDirectory: string, gitId: string) {
@@ -106,7 +113,7 @@ export async function push(gitDirectory: string, gitId: string) {
             return helpers.getOutput(
                 'git',
                 ['push', remote.trim(), gitId],
-                {cwd: gitDirectory, pipeToParent: true}
+                {cwd: gitDirectory, stdout: StdioPolicy.copy, stderr: StdioPolicy.inherit}
             );
         }).catch(error => {
             if (!(error instanceof helpers.CommandReturnedNonZeroError)) {
@@ -141,7 +148,7 @@ export async function resetToRemote(gitDirectory: string, branch: string) {
             helpers.getOutput(
                 'git',
                 ['reset', '--hard', `${remote.trim()}/${branch}`],
-                {cwd: gitDirectory, pipeToParent: true}
+                {cwd: gitDirectory, stdout: StdioPolicy.copy, stderr: StdioPolicy.inherit}
             )
         );
 }

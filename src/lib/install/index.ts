@@ -64,7 +64,11 @@ export default async function install(
         }
 
         if (!isRsyncModeEnabled) {
-            clearNodeModules().catch(() => {});
+            logger.trace('Started removing node_modules');
+            clearNodeModules().then(
+                () => {logger.trace('Successfully removed node_modules');},
+                err => {logger.debug(`Error during node_modules removal: ${err.stack}`);}
+            );
         }
     }
 
@@ -244,6 +248,9 @@ async function pullBackends(
         if (error instanceof errors.BundleNotFoundError) {
             return pullBackends(hash, config, lockfilePath, backendIndex + 1);
         } else {
+            logger.error(
+                `Backend '${backendConfig.alias}' failed on pull:`
+            );
             throw error;
         }
     }

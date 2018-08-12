@@ -20,6 +20,16 @@ export type ControlToken = {
     stdio?: [Writable, Readable, Readable];
 }
 
+export enum StdioPolicy {
+    inherit, // `process.stdout` or `process.stderr` is gonna be passed to child process.
+             // getOutput will not get data from corresponding stream
+    copy,    // each line sent stdout/stderr records, to `getOutput` result and sends to
+             // `process.stdout` / `process.stderr`
+    collect, // only record output to `getOutput` result
+    pipe,    // do not record output; corresponding stream will be available at controlToken's stdio
+    ignore,  // attach /dev/null to the stream
+}
+
 type GetOutputOptions = {
     controlToken?: ControlToken // You can pass an empty object here and it will populate
     // with useful stuff
@@ -28,15 +38,26 @@ type GetOutputOptions = {
 
     cwd?: string,
 
-    pipeToParent?: boolean,  // If true, every chunk of data will be pushed to stdout or stderr,
-    // like {stdio: 'inherit'}
+    stdout?: StdioPolicy,
+    stderr?: StdioPolicy,
+}
 
-    collectOutput?: boolean, // If false, getOutput will resolve into empty string,
-                             // but you can get actual output through `controlToken.stdio`
+function stdioPolicyToCpStdio(policy: StdioPolicy, fd: number): 'ignore' | 'pipe' | number {
+    if (policy === StdioPolicy.inherit) {
+        return fd;
+    } else if (policy === StdioPolicy.ignore) {
+        return 'ignore';
+    }
+
+    return 'pipe';
 }
 
 export function getOutput(executable: string, args: string[], {
-    timeoutDuration = 0, cwd = process.cwd(), pipeToParent = false, collectOutput = true, controlToken = {},
+    timeoutDuration = 0,
+    cwd = process.cwd(),
+    controlToken = {},
+    stdout = StdioPolicy.collect,
+    stderr = StdioPolicy.collect,
 }: GetOutputOptions = {}): Promise<string> {
     return new Promise((resolve, reject) => {
         const commandName = `[${executable} ${args.join(' ')}]`;
@@ -47,11 +68,18 @@ export function getOutput(executable: string, args: string[], {
         let timeout: NodeJS.Timer;
 
         logger.debug(`Running ${commandName}; cwd: ${cwd}`);
-        const proc = childProcess.spawn(executable, args, {stdio: 'pipe', cwd});
+        const proc = childProcess.spawn(executable, args, {
+            stdio: ['pipe', stdioPolicyToCpStdio(stdout, 1), stdioPolicyToCpStdio(stderr, 2)],
+            cwd,
+        });
         controlToken.terminate = () => {
             logger.debug(`Terminating ${commandName} using control token`);
-            proc.kill()
+            proc.kill();
         };
+
+        const deathHand = () => proc.kill();
+
+        process.on('exit', deathHand);
 
         controlToken.stdio = proc.stdio;
 
@@ -67,25 +95,28 @@ export function getOutput(executable: string, args: string[], {
             }, timeoutDuration);
         }
 
-        if (collectOutput) {
+        if (stdout === StdioPolicy.collect || stdout === StdioPolicy.copy) {
             proc.stdout.on('data', data => {
                 result += data.toString();
 
-                if (pipeToParent) {
+                if (stdout === StdioPolicy.copy) {
                     process.stdout.write(data);
                 }
             });
+        }
 
+        if (stderr === StdioPolicy.collect || stderr === StdioPolicy.copy) {
             proc.stderr.on('data', data => {
                 result += data.toString();
 
-                if (pipeToParent) {
+                if (stdout === StdioPolicy.copy) {
                     process.stderr.write(data);
                 }
             });
         }
 
         proc.on('exit', (code, signal) => {
+            process.removeListener('exit', deathHand);
             if (!completed) {
                 if (code === 0) {
                     logger.debug(`Command ${commandName} exited with 0`);

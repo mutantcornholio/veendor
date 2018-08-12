@@ -4,4 +4,5 @@ const logger = require('@/lib/util/logger');
 const progress = require('@/lib/util/progress');
 
 progress.blockAllProgress(true);
-logger.setLogger(tracer.console({level: 6}));
+const logLevel = process.env.DEBUG ? 1 : 6;
+logger.setLogger(tracer.console({level: logLevel}));
