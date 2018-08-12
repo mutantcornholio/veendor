@@ -1,11 +1,11 @@
 import http from 'http';
 import https from 'https';
 import url from 'url';
-import {ProgressStream} from '@/lib/install/helpers';
 import * as tarWrapper from '../commandWrappers/tarWrapper';
 import * as errors from '../errors';
 import {Compression} from '@/lib/commandWrappers/tarWrapper';
 import {ControlToken} from '@/lib/commandWrappers/helpers';
+import {BackendToolsProvider} from '@/types';
 
 
 type HttpOptions = {
@@ -36,7 +36,7 @@ export function validateOptions(options: Partial<HttpOptions>) {
     }
 }
 
-export async function pull(hash: string, options: HttpOptions) {
+export async function pull(hash: string, options: HttpOptions, _cachedir: string, toolsProvider: BackendToolsProvider) {
     let resolvedUrlPromise = options.resolveUrl(hash);
 
     if (!(resolvedUrlPromise instanceof Promise)) {
@@ -95,13 +95,13 @@ export async function pull(hash: string, options: HttpOptions) {
                 const contentLength = typeof contentLengthHeader === 'string' ?
                     (parseInt(contentLengthHeader, 10)) : undefined;
 
-                const tarWrapperToken: ControlToken = {};
-
-                const progressStream = new ProgressStream({}, 'http pull',  contentLength);
+                const progressStream = toolsProvider.getProgressStream('pull', contentLength);
 
                 res.pipe(progressStream);
 
+                progressStream.toggleVisibility(true);
 
+                const tarWrapperToken: ControlToken = {};
                 tarWrapper.extractArchiveFromStream(progressStream, {controlToken: tarWrapperToken})
                     .then(() => {
                         if (!done) {

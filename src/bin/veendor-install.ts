@@ -3,7 +3,7 @@ import fsExtra from 'fs-extra';
 import program from 'commander';
 
 import resolveConfig from '@/lib/resolveConfig';
-import * as logger from '@/lib/logger';
+import * as logger from '@/lib/util/logger';
 import * as gitWrapper from '@/lib/commandWrappers/gitWrapper';
 import resolveLockfile from '@/lib/resolveLockfile';
 import install, {NodeModulesAlreadyExistError} from '@/lib/install';

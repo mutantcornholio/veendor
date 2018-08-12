@@ -98,56 +98,58 @@ describe('veendor', function () {
     describe('install', function () {
         this.timeout(40000);
 
-        beforeEach(() => {
-            return fsExtra.emptyDir(path.join(s3Dir, 'testbucket'));
+        it('shoud pull node_modules from git repo', ()=> {
+            return runBashTest('gitPull');
         });
 
-        it('shoud pull node_modules from git repo', done => {
-            runBashTest('gitPull', done);
+        it('shoud push archive to git repo', () => {
+            return runBashTest('gitPush');
         });
 
-        it('shoud push archive to git repo', done => {
-            runBashTest('gitPush', done);
+        it('shoud pull node_modules from local directory', () => {
+            return runBashTest('localPull');
         });
 
-        it('shoud pull node_modules from local directory', done => {
-            runBashTest('localPull', done);
+        it('shoud copy archive to local directory', () => {
+            return runBashTest('localPush');
         });
 
-        it('shoud copy archive to local directory', done => {
-            runBashTest('localPush', done);
+        it('shoud copy archive to local directory when used with lockfile', () => {
+            return runBashTest('localPushWithPackageLock');
         });
 
-        it('shoud copy archive to local directory when used with lockfile', done => {
-            runBashTest('localPushWithPackageLock', done);
+        it('shoud pull node_modules from http server', () => {
+            return runBashTest('httpPull');
         });
 
-        it('shoud pull node_modules from http server', done => {
-            runBashTest('httpPull', done);
-        });
+        describe('s3', () => {
+            beforeEach(() => {
+                return fsExtra.emptyDir(path.join(s3Dir, 'testbucket'));
+            });
 
-        it('shoud pull node_modules from s3 server', done => {
-            runBashTest('s3Pull', done);
-        });
+            it('shoud pull node_modules from s3 server', () => {
+                return runBashTest('s3Pull');
+            });
 
-        it('shoud push node_modules to s3 server', done => {
-            runBashTest('s3Push', done);
+            it('shoud push node_modules to s3 server', () => {
+                return runBashTest('s3Push');
+            });
         });
     });
 
     describe('calc', function () {
         this.timeout(20000);
 
-        it('shoud return hash on package.json', done => {
-            runBashTest('calcHashPlain', done);
+        it('shoud return hash on package.json', () => {
+            return runBashTest('calcHashPlain');
         });
 
-        it('shoud return hash on package.json + package-lock.json', done => {
-            runBashTest('calcHashWithPackageLock', done);
+        it('shoud return hash on package.json + package-lock.json', () => {
+            return runBashTest('calcHashWithPackageLock');
         });
 
-        it('shoud return hash on package.json + npm-shrinkwrap.json', done => {
-            runBashTest('calcHashWithShrinkWrap', done);
+        it('shoud return hash on package.json + npm-shrinkwrap.json', () => {
+            return runBashTest('calcHashWithShrinkWrap');
         });
 
         xit('shoud return hash on package.json + yarn.lock', done => {
@@ -156,8 +158,8 @@ describe('veendor', function () {
     });
 });
 
-function runBashTest(testCase, done) {
-    executeBashTest(testCase, _.cloneDeep(NODE_VERSIONS)).then(() => done(), error => done(error));
+function runBashTest(testCase) {
+    return executeBashTest(testCase, _.cloneDeep(NODE_VERSIONS));
 }
 
 function executeBashTest(testCase, remainingVersions) {
@@ -190,7 +192,7 @@ function executeBashTest(testCase, remainingVersions) {
                 if (remainingVersions.length === 0) {
                     resolve();
                 } else {
-                    executeBashTest(testCase, remainingVersions).then(resolve, reject);
+                    return executeBashTest(testCase, remainingVersions).then(resolve, reject);
                 }
             }, error => {
                 if (error.output) {

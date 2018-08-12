@@ -1,6 +1,6 @@
 'use strict';
 
-import {getLogger} from '@/lib/logger';
+import {getLogger} from '@/lib/util/logger';
 import * as helpers from './helpers';
 import pushBackends from './pushBackends';
 import * as rsyncWrapper from '@/lib/commandWrappers/rsyncWrapper';
@@ -12,8 +12,9 @@ import * as objectDiff from 'deep-object-diff';
 import path from 'path';
 import fsExtra from 'fs-extra';
 
-import {BackendConfig, Config, configHasHistory, PkgJson} from '@/types';
+import {BackendCalls, BackendConfig, Config, configHasHistory, PkgJson} from '@/types';
 import {getFSHash, getHistoryHash} from "@/lib/install/hashGetters";
+import {provideBackendCallTools} from '@/lib/util/progress';
 
 const {nodeModules, pkgJsonPath, originalCwd} = helpers.paths;
 // let clearNodeModulesPromise: Promise<void>;
@@ -221,7 +222,10 @@ async function pullBackends(
             await helpers.createCleanCwd(lockfilePath);
         }
 
-        await backendConfig.backend.pull(hash, backendConfig.options, cacheDirPath);
+        await backendConfig.backend.pull(
+            hash, backendConfig.options, cacheDirPath,
+            provideBackendCallTools(backendConfig, BackendCalls.push)
+        );
 
         if (isRsyncModeEnabled) {
             logger.info(`Successfully fetched ${hash} from '${backendConfig.alias}'. Unpacking.`);

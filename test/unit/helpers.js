@@ -1,10 +1,13 @@
 'use strict';
+// import {ProgressStream} from '@/lib/util/progress';
+
 const fsExtra = require('fs-extra');
 const path = require('path');
 const stream = require('stream');
 
-const {getLogger} = require('@/lib/logger');
+const {getLogger} = require('@/lib/util/logger');
 const wrapperHelpers = require('@/lib/commandWrappers/helpers');
+const {ProgressStream} = require('@/lib/util/progress');
 
 function fakeBackendConfig(alias) {
     return {
@@ -164,6 +167,18 @@ function mockGetOutput(sandbox) {
     });
 }
 
+function makeFakeBackendToolsProvider() {
+    return {
+        getLogger() {
+            return getLogger();
+        },
+
+        getProgressStream(label, total) {
+            return new ProgressStream({}, label || 'wat', {}, total);
+        },
+    };
+}
+
 module.exports = {
     fakeBackendConfig,
     createNodeModules,
@@ -179,4 +194,5 @@ module.exports = {
     fakeExtractArchiveFromStream,
     fakeCreateStreamArchive,
     mockGetOutput,
+    makeFakeBackendToolsProvider,
 };

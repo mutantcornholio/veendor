@@ -3,7 +3,7 @@ import path from 'path';
 import program from 'commander';
 
 import resolveConfig from '@/lib/resolveConfig';
-import * as logger from '@/lib/logger';
+import * as logger from '@/lib/util/logger';
 import resolveLockfile from '@/lib/resolveLockfile';
 import {getFSHash} from '@/lib/install/hashGetters';
 

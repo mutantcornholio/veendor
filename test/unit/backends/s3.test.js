@@ -22,6 +22,7 @@ const {
     DevNullStream,
     fakeExtractArchiveFromStream,
     fakeCreateStreamArchive,
+    makeFakeBackendToolsProvider,
 } = require('../helpers');
 
 let sandbox;
@@ -142,7 +143,7 @@ describe('s3 backend', () => {
                 Key: `${fakeHash}.tar.gz`,
             }).callThrough();
 
-            return s3Backend.pull(fakeHash, defaultOptions, '.veendor/s3')
+            return s3Backend.pull(fakeHash, defaultOptions, '.veendor/s3', makeFakeBackendToolsProvider())
                 .then(() => s3Mock.verify());
         });
 
@@ -154,22 +155,26 @@ describe('s3 backend', () => {
                 .withArgs(sinon.match.instanceOf(Stream))
                 .callsFake(fakeExtractArchiveFromStream);
 
-            return s3Backend.pull(fakeHash, defaultOptions, '.veendor/s3')
+            return s3Backend.pull(fakeHash, defaultOptions, '.veendor/s3', makeFakeBackendToolsProvider())
                 .then(() => tarWrapperMock.verify());
         });
 
-        it('should reject with BundleDownloadError if stream fails', done => {
+        it('should reject with BundleDownloadError if stream fails', () => {
             bundleStream = new FailingStream();
 
-            assert.isRejected(s3Backend.pull(fakeHash, defaultOptions, '.veendor/s3'), s3Backend.BundleDownloadError)
-                .notify(done);
+            return assert.isRejected(
+                s3Backend.pull(fakeHash, defaultOptions, '.veendor/s3', makeFakeBackendToolsProvider()),
+                s3Backend.BundleDownloadError
+            );
         });
 
-        it('should reject with BundleNotFoundError if stream fails with NoSuchKey', done => {
+        it('should reject with BundleNotFoundError if stream fails with NoSuchKey', () => {
             bundleStream = new FailingStream(new AWSError('The specified key does not exist.', 404, 'NoSuchKey'));
 
-            assert.isRejected(s3Backend.pull(fakeHash, defaultOptions, '.veendor/s3'), errors.BundleNotFoundError)
-                .notify(done);
+            return assert.isRejected(
+                s3Backend.pull(fakeHash, defaultOptions, '.veendor/s3', makeFakeBackendToolsProvider()),
+                errors.BundleNotFoundError
+            );
         });
     });
 
@@ -193,10 +198,12 @@ describe('s3 backend', () => {
 
             s3Mock.expects('upload').never();
 
-            return s3Backend.push(fakeHash, defaultOptions, '.veendor/s3').catch(() => s3Mock.verify());
+            return s3Backend
+                .push(fakeHash, defaultOptions, '.veendor/s3', makeFakeBackendToolsProvider())
+                .catch(() => s3Mock.verify());
         });
 
-        it('should with BundleAlreadyExistsError is object exists', done => {
+        it('should with BundleAlreadyExistsError is object exists', () => {
             fakeS3HeadResultPromise = Promise.resolve({
                 AcceptRanges: 'bytes',
                 LastModified: new Date(),
@@ -206,8 +213,10 @@ describe('s3 backend', () => {
                 Metadata: {},
             });
 
-            assert.isRejected(s3Backend.push(fakeHash, defaultOptions, '.veendor/s3'), errors.BundleAlreadyExistsError)
-                .notify(done);
+            return assert.isRejected(
+                s3Backend.push(fakeHash, defaultOptions, '.veendor/s3', makeFakeBackendToolsProvider()),
+                errors.BundleAlreadyExistsError
+            );
         });
 
         it('should create streamArchive and call s3.upload with it', () => {
@@ -224,15 +233,19 @@ describe('s3 backend', () => {
                 Body: sinon.match.instanceOf(Stream),
             }).callThrough();
 
-            return s3Backend.push(fakeHash, defaultOptions, '.veendor/s3').then(() => s3Mock.verify());
+            return s3Backend
+                .push(fakeHash, defaultOptions, '.veendor/s3', makeFakeBackendToolsProvider())
+                .then(() => s3Mock.verify());
         });
 
-        it('should reject with BundleUploadError if s3 upload fails', done => {
+        it('should reject with BundleUploadError if s3 upload fails', () => {
             fakeS3HeadResultPromise = null;
             fakeS3UploadError = new AnError('wat');
 
-            assert.isRejected(s3Backend.push(fakeHash, defaultOptions, '.veendor/s3'), s3Backend.BundleUploadError)
-                .notify(done);
+            return assert.isRejected(
+                s3Backend.push(fakeHash, defaultOptions, '.veendor/s3', makeFakeBackendToolsProvider()),
+                s3Backend.BundleUploadError
+            );
         });
     });
 

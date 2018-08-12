@@ -1,7 +1,8 @@
 import * as errors from '../errors';
-import {getLogger} from '../logger';
+import {getLogger} from '../util/logger';
 import * as helpers from './helpers';
-import {BackendConfig} from '@/types';
+import {provideBackendCallTools} from '../util/progress';
+import {BackendCalls, BackendConfig} from '@/types';
 
 export default async function pushBackends(
     backendConfigs: BackendConfig[], hash: string, rePull: boolean): Promise<void> {
@@ -26,7 +27,7 @@ export default async function pushBackends(
         logger.info(`Pushing '${hash}' to '${backend.alias}' backend`);
 
         let promise = backend.backend
-            .push(hash, backend.options, cacheDirs[index])
+            .push(hash, backend.options, cacheDirs[index], provideBackendCallTools(backend, BackendCalls.push))
             .then(() => {
                 logger.info(`Pushing ${hash}' to '${backend.alias}' backend completed succsessfully`);
             });

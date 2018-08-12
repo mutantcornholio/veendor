@@ -66,14 +66,14 @@ export function pull(hash: string, options: GitLfsOptions, cacheDir: string) {
                     return Promise.resolve();
                 }
 
-                return gitWrapper.fetch(repoDir);
+                return gitWrapper.fetch(repoDir).then(() => {});
             } else {
 
                 if (module.exports._remoteIsFresh) {
                     return Promise.resolve();
                 }
 
-                return gitWrapper.clone(options.repo, repoDir);
+                return gitWrapper.clone(options.repo, repoDir).then(() => {});
             }
         })
         .then(() => {
@@ -99,7 +99,7 @@ export function pull(hash: string, options: GitLfsOptions, cacheDir: string) {
         });
 }
 
-export function push(hash, options, cacheDir) {
+export function push(hash:string, options: GitLfsOptions, cacheDir: string) {
     const repoDir = path.resolve(cacheDir, 'repo');
     const archivePath = path.resolve(
         repoDir,

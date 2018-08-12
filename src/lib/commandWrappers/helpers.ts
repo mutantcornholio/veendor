@@ -4,7 +4,7 @@ import childProcess from 'child_process';
 import {Writable, Readable} from 'stream';
 
 import * as errors from '../errors';
-import {getLogger} from '../logger';
+import {getLogger} from '../util/logger';
 
 export class CommandError extends errors.VeendorError {
     constructor(message: string, public output: string) {

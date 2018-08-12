@@ -5,7 +5,7 @@ import util from 'util';
 
 import fsExtra from 'fs-extra';
 import path from 'path';
-import {getLogger} from "@/lib/logger";
+import {getLogger} from "@/lib/util/logger";
 
 // add yarn.lock one day
 const LOCKFILE_TYPES = ['npm-shrinkwrap.json', 'package-lock.json'];

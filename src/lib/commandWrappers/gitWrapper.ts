@@ -1,7 +1,7 @@
 import path from 'path';
 import * as helpers from './helpers';
 import * as errors from '../errors';
-import {getLogger} from '../logger';
+import {getLogger} from '../util/logger';
 
 export class NotAGitRepoError extends errors.VeendorError {}
 export class GitIsNotADirectoryError extends errors.VeendorError {}

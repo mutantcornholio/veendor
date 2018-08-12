@@ -6,8 +6,8 @@ import * as tarWrapper from '../commandWrappers/tarWrapper';
 import * as errors from '../errors';
 import {ControlToken} from '@/lib/commandWrappers/helpers';
 import {Compression} from '../commandWrappers/tarWrapper';
-import {ProgressStream} from '@/lib/install/helpers';
 import {Readable} from 'stream';
+import {BackendToolsProvider} from '@/types';
 
 type S3Options = {
     compression: Compression,
@@ -46,7 +46,7 @@ export function validateOptions(options: Partial<S3Options>) {
     options.__s3 = new AWS.S3(options.s3Options);
 }
 
-export async function pull(hash: string, options: S3Options) {
+export async function pull(hash: string, options: S3Options, _cachedir: string, toolsProvider: BackendToolsProvider) {
     const s3 = options.__s3;
     const filename = `${hash}.tar${tarWrapper.compression[options.compression]}`;
 
@@ -57,9 +57,12 @@ export async function pull(hash: string, options: S3Options) {
         Key: filename,
     };
 
+    const logger = toolsProvider.getLogger();
+
     let meta;
     let contentLength;
     try {
+        logger.trace('[s3 pull] marking headObject request to S3');
         meta = await s3.headObject(s3Params).promise();
         contentLength = meta.ContentLength;
     } catch (error) {
@@ -70,15 +73,19 @@ export async function pull(hash: string, options: S3Options) {
         }
     }
 
+    logger.trace('[s3 pull] marking getObject request to S3');
     downloadStream = s3.getObject(s3Params).createReadStream();
 
-    const progressStream = new ProgressStream({}, 's3 pull', contentLength);
+    const progressStream = toolsProvider.getProgressStream('pull', contentLength);
 
     const tarWrapperToken: ControlToken = {};
     const extractPromise = new Promise((resolve, reject) => {
         downloadStream.once('readable', () => {
+            logger.trace('[s3 pull] downloadStream is readable');
             downloadStream.pipe(progressStream);
             tarWrapper.extractArchiveFromStream(progressStream, {controlToken: tarWrapperToken}).then(resolve, reject);
+            progressStream.toggleVisibility(true);
+
         })
     });
 
@@ -93,6 +100,8 @@ export async function pull(hash: string, options: S3Options) {
                     tarWrapperToken.terminate();
                 }
 
+                progressStream.die();
+
                 if (error.statusCode === 404) {
                     return reject(new errors.BundleNotFoundError());
                 }
@@ -102,8 +111,10 @@ export async function pull(hash: string, options: S3Options) {
         });
 
         downloadStream.once('end', () => {
+            logger.trace('[s3 pull] downloadStream end');
             if (!done) {
                 done = true;
+                progressStream.die();
                 resolve();
             }
         });
@@ -111,6 +122,7 @@ export async function pull(hash: string, options: S3Options) {
         downloadStream.once('close', () => {
             if (!done) {
                 done = true;
+                progressStream.die();
                 resolve();
             }
         });
@@ -119,7 +131,7 @@ export async function pull(hash: string, options: S3Options) {
     return Promise.all([downloadStreamPromise, extractPromise]);
 }
 
-export function push(hash: string, options: S3Options) {
+export function push(hash: string, options: S3Options, _cachedir: string, toolsProvider: BackendToolsProvider) {
     const filename = `${hash}.tar${tarWrapper.compression[options.compression]}`;
     const s3 = options.__s3;
 
@@ -128,7 +140,10 @@ export function push(hash: string, options: S3Options) {
     const {stream, promise} = tarWrapper
         .createStreamArchive([path.resolve(process.cwd(), 'node_modules')], options.compression, {controlToken});
 
-    const progressStream = new ProgressStream({}, 's3 push');
+    const progressStream = toolsProvider.getProgressStream('push');
+
+    setTimeout(() => progressStream.toggleVisibility(true), 500);
+
     stream.pipe(progressStream);
     return s3.headObject({
         Bucket: options.bucket,
@@ -152,6 +167,8 @@ export function push(hash: string, options: S3Options) {
             if (controlToken.terminate !== undefined) {
                 controlToken.terminate();
             }
+
+            progressStream.die();
 
             if (error instanceof errors.VeendorError) {
                 throw error;

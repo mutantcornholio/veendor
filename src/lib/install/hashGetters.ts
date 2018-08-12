@@ -1,6 +1,6 @@
 import fsExtra from 'fs-extra';
 import {Config, ConfigWithHistory, PkgJson} from '@/types';
-import {getLogger} from '@/lib/logger';
+import {getLogger} from '@/lib/util/logger';
 import * as gitWrapper from '@/lib/commandWrappers/gitWrapper';
 import * as pkgJsonUtils from '@/lib/pkgjson';
 import {BundlesNotFoundError} from '@/lib/install/index';

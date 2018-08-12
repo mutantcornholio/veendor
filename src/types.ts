@@ -1,4 +1,6 @@
-import {StringMap} from "@/serviceTypes";
+import {StringMap} from '@/serviceTypes';
+import {Tracer} from 'tracer';
+import {ProgressStream} from '@/lib/util/progress';
 
 export type BackendConfig = {
     backend: Backend,
@@ -9,13 +11,20 @@ export type BackendConfig = {
 }
 
 export type Backend = {
-    pull: (hash: string, options: BackendOptions, cacheDir: string) => Promise<any>,
-    push: (hash: string, options: BackendOptions, cacheDir: string) => Promise<any>,
+    pull: (hash: string, options: BackendOptions, cacheDir: string, toolsProvider: BackendToolsProvider) => Promise<any>,
+    push: (hash: string, options: BackendOptions, cacheDir: string, toolsProvider: BackendToolsProvider) => Promise<any>,
     validateOptions: (options: BackendOptions) => Promise<any>,
     keepCache?: boolean,
 }
 
+export type BackendToolsProvider = {
+    getLogger: () => Tracer.Logger,
+    getProgressStream: (label?: string, total?: number) => ProgressStream,
+}
+
 export type BackendOptions = object;
+
+export enum BackendCalls {pull, push, validateOptions}
 
 export type Config = {
     installDiff: boolean,

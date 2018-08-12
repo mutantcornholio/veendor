@@ -7,7 +7,7 @@ const tracer = require('tracer');
 
 const pushBackends = require('@/lib/install/pushBackends').default;
 const errors = require('@/lib/errors');
-const logger = require('@/lib/logger');
+const logger = require('@/lib/util/logger');
 const helpers = require('../helpers');
 
 const assert = chai.assert;

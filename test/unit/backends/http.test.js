@@ -12,6 +12,7 @@ chai.use(chaiAsPromised);
 const httpBackend = require('@/lib/backends/http');
 const tarWrapper = require('@/lib/commandWrappers/tarWrapper');
 const errors = require('@/lib/errors');
+const makeFakeBackendToolsProvider = require('../helpers').makeFakeBackendToolsProvider;
 const {
     checkMockResult,
     checkNock,
@@ -94,7 +95,7 @@ describe('http backend', () => {
             const checkResult = checkNock.bind(null, [scope], done);
 
             httpBackend
-                .pull(fakeHash, defaultOptions, '.veendor/http')
+                .pull(fakeHash, defaultOptions, '.veendor/http', makeFakeBackendToolsProvider())
                 .then(checkResult, checkResult);
         });
 
@@ -108,7 +109,7 @@ describe('http backend', () => {
             const checkResult = checkNock.bind(null, [scope], done);
 
             httpBackend
-                .pull(fakeHash, defaultOptions, '.veendor/http')
+                .pull(fakeHash, defaultOptions, '.veendor/http', makeFakeBackendToolsProvider())
                 .then(checkResult, checkResult);
         });
 
@@ -122,14 +123,14 @@ describe('http backend', () => {
             const checkResult = checkNock.bind(null, [scope], done);
 
             httpBackend
-                .pull(fakeHash, defaultOptions, '.veendor/http')
+                .pull(fakeHash, defaultOptions, '.veendor/http', makeFakeBackendToolsProvider())
                 .then(checkResult, checkResult);
         });
 
         it('should reject with InvalidProtocolError if url resolved is not http/https', done => {
             defaultOptions.resolveUrl = bundleId => `ftp://testhost.wat/${bundleId}.tar.gz`;
 
-            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http');
+            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http', makeFakeBackendToolsProvider());
             assert.isRejected(result, httpBackend.InvalidProtocolError).notify(done);
         });
 
@@ -148,7 +149,7 @@ describe('http backend', () => {
                 .get(`/${fakeHash}.tar.gz`)
                 .reply(200, bundleStream, {'Content-Type': 'application/x-gzip'});
 
-            return httpBackend.pull(fakeHash, defaultOptions, '.veendor/http')
+            return httpBackend.pull(fakeHash, defaultOptions, '.veendor/http', makeFakeBackendToolsProvider())
                 .then(() => tarWrapperMock.verify());
         });
 
@@ -157,7 +158,7 @@ describe('http backend', () => {
                 .get(`/${fakeHash}.tar.gz`)
                 .reply(404);
 
-            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http');
+            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http', makeFakeBackendToolsProvider());
             assert.isRejected(result, errors.BundleNotFoundError).notify(done);
         });
 
@@ -166,7 +167,7 @@ describe('http backend', () => {
                 .get(`/${fakeHash}.tar.gz`)
                 .reply(502);
 
-            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http');
+            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http', makeFakeBackendToolsProvider());
             assert.isRejected(result, errors.BundleNotFoundError).notify(done);
         });
 
@@ -176,7 +177,7 @@ describe('http backend', () => {
                 .get(`/${fakeHash}.tar.gz`)
                 .reply(502);
 
-            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http');
+            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http', makeFakeBackendToolsProvider());
             assert.isRejected(result, httpBackend.InvalidStatusCodeError).notify(done);
         });
 
@@ -185,7 +186,7 @@ describe('http backend', () => {
                 .get(`/${fakeHash}.tar.gz`)
                 .reply(200, new FailingStream(), {'Content-Type': 'application/x-gzip'});
 
-            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http');
+            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http', makeFakeBackendToolsProvider());
             assert.isRejected(result, errors.BundleNotFoundError).notify(done);
         });
 
@@ -195,7 +196,7 @@ describe('http backend', () => {
                 .get(`/${fakeHash}.tar.gz`)
                 .reply(200, new FailingStream(), {'Content-Type': 'application/x-gzip'});
 
-            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http');
+            const result = httpBackend.pull(fakeHash, defaultOptions, '.veendor/http', makeFakeBackendToolsProvider());
             assert.isRejected(result, httpBackend.BundleDownloadError).notify(done);
         });
     });
