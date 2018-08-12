@@ -16,8 +16,8 @@ import {BackendConfig, Config, configHasHistory, PkgJson} from '@/types';
 import {getFSHash, getHistoryHash} from "@/lib/install/hashGetters";
 
 const {nodeModules, pkgJsonPath, originalCwd} = helpers.paths;
-let clearNodeModulesPromise: Promise<void>;
-let rsyncAvailable = false;
+// let clearNodeModulesPromise: Promise<void>;
+let isRsyncModeEnabled = false;
 
 type PullInfo = {
     missingBackends: BackendConfig[];
@@ -32,39 +32,39 @@ enum InstallStages {
 }
 
 export default async function install(
-    {force = false, config, rePull = false, rePullHash = null, lockfilePath = null}:
+    {force = false, config, lockfilePath = null, rsyncMode = false}:
     {
         force: boolean, // remove node_modules if exist
         config: Config,
-        rePull: boolean, // this happens if we failed to push bundle because someone got faster then us
-                         // in this case, we're gonna download bundle someone else has built
-                         // if true, catching BundleAlreadyExistsError from backend will reject result
-                         // just to make sure, we won't fall into infinite loop here
-        rePullHash: string | null, // hash, on which push has failed
-                                   // we need to be sure that we'll go with the same hash the second time
-        lockfilePath: string | null // path to lockfile, detected at startup. null, if no lockfile detected
+        lockfilePath: string | null, // path to lockfile, detected at startup. null, if no lockfile detected
+        rsyncMode: boolean,
     }
 ): Promise<void> {
     const logger = getLogger();
 
     let backendsToPush: BackendConfig[] = [];
 
-    rsyncAvailable = await rsyncWrapper.rsyncAvailable();
-    const isGitRepo = await gitWrapper.isGitRepo(originalCwd);
+    const [rsyncAvailable, nodeModulesInPlace] = await Promise.all([
+        rsyncWrapper.rsyncAvailable(),
+        nodeModulesAlreadyExist(),
+    ]);
 
-    if (rePull && rePullHash !== null) {
-        await pullBackends(rePullHash, config, lockfilePath);
-        return;
+    isRsyncModeEnabled = rsyncMode && rsyncAvailable && nodeModulesInPlace;
+
+    if (isRsyncModeEnabled) {
+        logger.info('Working in rsync mode');
     }
 
-    if (await nodeModulesAlreadyExist()) {
+    const isGitRepo = await gitWrapper.isGitRepo(originalCwd);
+
+    if (nodeModulesInPlace) {
         if (!force) {
             throw new NodeModulesAlreadyExistError();
         }
 
-        clearNodeModulesPromise = clearNodeModules();
-    } else {
-        clearNodeModulesPromise = Promise.resolve();
+        if (!isRsyncModeEnabled) {
+            clearNodeModules().catch(() => {});
+        }
     }
 
     /**
@@ -148,13 +148,13 @@ export default async function install(
         await pushBackends(backendsToPush, hash, false);
     } catch (pushError) {
         if (pushError instanceof errors.RePullNeeded) {
-            await install({
-                force: true,
-                rePull: true,
-                rePullHash: hash,
-                config,
-                lockfilePath
-            });
+            // this happens if we failed to push bundle because someone got faster then us
+            // in this case, we're gonna download bundle someone else has built
+            // if true, catching BundleAlreadyExistsError from backend will reject result
+            // just to make sure, we won't fall into infinite loop here
+
+            await pullBackends(hash, config, lockfilePath);
+
         } else {
             throw pushError;
         }
@@ -176,11 +176,30 @@ async function nodeModulesAlreadyExist(): Promise<boolean> {
 }
 
 async function clearNodeModules(): Promise<void> {
-    if (rsyncAvailable) {
+    const logger = getLogger();
+    if (isRsyncModeEnabled) {
         return;
     }
 
-    return fsExtra.remove(nodeModules);
+    logger.trace(`moving node_modules to node_modules.bak.0`);
+
+    let bodyCount = 0;
+    let bakDirname;
+    while (true) {
+        bakDirname = `${nodeModules}.bak.${bodyCount}`;
+        logger.trace(`moving node_modules to ${bakDirname}`);
+        try {
+            await fsExtra.stat(bakDirname);
+            logger.trace(`${bakDirname} already exists; incrementing`);
+            bodyCount++;
+        } catch (err) {
+            if (err.code && err.code === 'ENOENT') {
+                await fsExtra.rename(nodeModules, bakDirname);
+                logger.trace(`move was successful; removing ${bakDirname} without blocking`);
+                return fsExtra.remove(bakDirname);
+            }
+        }
+    }
 }
 
 async function pullBackends(
@@ -196,25 +215,20 @@ async function pullBackends(
     logger.info(`Trying backend '${backendConfig.alias}' with hash ${hash}`);
 
     try {
+        const cacheDirPath = await helpers.createCleanCacheDir(backendConfig);
 
-        const [cacheDirPath] = await Promise.all([
-            helpers.createCleanCacheDir(backendConfig),
-            helpers.createCleanCwd(lockfilePath),
-        ]);
+        if (isRsyncModeEnabled) {
+            await helpers.createCleanCwd(lockfilePath);
+        }
 
         await backendConfig.backend.pull(hash, backendConfig.options, cacheDirPath);
 
-        logger.info(`Successfully fetched ${hash} from '${backendConfig.alias}'. Unpacking.`);
+        if (isRsyncModeEnabled) {
+            logger.info(`Successfully fetched ${hash} from '${backendConfig.alias}'. Unpacking.`);
 
-        await clearNodeModulesPromise;
-
-        const newNodeModules = path.resolve(process.cwd(), 'node_modules');
-        helpers.restoreCWD();
-
-        if (rsyncAvailable) {
+            const newNodeModules = path.resolve(process.cwd(), 'node_modules');
+            helpers.restoreCWD();
             await rsyncWrapper.syncDirs(newNodeModules, process.cwd());
-        } else {
-            await fsExtra.move(newNodeModules, nodeModules);
         }
 
         logger.info(`Pulled ${hash} from backend '${backendConfig.alias}'`);

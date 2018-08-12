@@ -6,6 +6,8 @@ import * as tarWrapper from '../commandWrappers/tarWrapper';
 import * as errors from '../errors';
 import {ControlToken} from '@/lib/commandWrappers/helpers';
 import {Compression} from '../commandWrappers/tarWrapper';
+import {ProgressStream} from '@/lib/install/helpers';
+import {Readable} from 'stream';
 
 type S3Options = {
     compression: Compression,
@@ -17,7 +19,7 @@ type S3Options = {
     __s3: AWS.S3,
 }
 
-function validateOptions(options: Partial<S3Options>) {
+export function validateOptions(options: Partial<S3Options>) {
     if (options.compression && !(options.compression in tarWrapper.compression)) {
         throw new errors.InvalidOptionsError(`Invalid compression: ${options.compression}`);
     }
@@ -44,19 +46,39 @@ function validateOptions(options: Partial<S3Options>) {
     options.__s3 = new AWS.S3(options.s3Options);
 }
 
-function pull(hash: string, options: S3Options) {
+export async function pull(hash: string, options: S3Options) {
     const s3 = options.__s3;
     const filename = `${hash}.tar${tarWrapper.compression[options.compression]}`;
 
-    const downloadStream = s3.getObject({
+    let downloadStream: Readable;
+
+    const s3Params = {
         Bucket: options.bucket,
         Key: filename,
-    }).createReadStream();
+    };
+
+    let meta;
+    let contentLength;
+    try {
+        meta = await s3.headObject(s3Params).promise();
+        contentLength = meta.ContentLength;
+    } catch (error) {
+        if (error.statusCode === 404) {
+            throw new errors.BundleNotFoundError();
+        } else {
+            throw new BundleDownloadError(error.message);
+        }
+    }
+
+    downloadStream = s3.getObject(s3Params).createReadStream();
+
+    const progressStream = new ProgressStream({}, 's3 pull', contentLength);
 
     const tarWrapperToken: ControlToken = {};
     const extractPromise = new Promise((resolve, reject) => {
         downloadStream.once('readable', () => {
-            tarWrapper.extractArchiveFromStream(downloadStream, {controlToken: tarWrapperToken}).then(resolve, reject);
+            downloadStream.pipe(progressStream);
+            tarWrapper.extractArchiveFromStream(progressStream, {controlToken: tarWrapperToken}).then(resolve, reject);
         })
     });
 
@@ -97,7 +119,7 @@ function pull(hash: string, options: S3Options) {
     return Promise.all([downloadStreamPromise, extractPromise]);
 }
 
-function push(hash: string, options: S3Options) {
+export function push(hash: string, options: S3Options) {
     const filename = `${hash}.tar${tarWrapper.compression[options.compression]}`;
     const s3 = options.__s3;
 
@@ -106,6 +128,8 @@ function push(hash: string, options: S3Options) {
     const {stream, promise} = tarWrapper
         .createStreamArchive([path.resolve(process.cwd(), 'node_modules')], options.compression, {controlToken});
 
+    const progressStream = new ProgressStream({}, 's3 push');
+    stream.pipe(progressStream);
     return s3.headObject({
         Bucket: options.bucket,
         Key: filename,
@@ -118,7 +142,7 @@ function push(hash: string, options: S3Options) {
                     Bucket: options.bucket,
                     Key: filename,
                     ACL: options.objectAcl,
-                    Body: stream,
+                    Body: progressStream,
                 }).promise().then(() => promise);
             }
 
@@ -137,13 +161,5 @@ function push(hash: string, options: S3Options) {
         });
 }
 
-class BundleDownloadError extends errors.VeendorError {}
-class BundleUploadError extends errors.VeendorError {}
-
-module.exports = {
-    validateOptions,
-    pull,
-    push,
-    BundleDownloadError,
-    BundleUploadError,
-};
+export class BundleDownloadError extends errors.VeendorError {}
+export class BundleUploadError extends errors.VeendorError {}

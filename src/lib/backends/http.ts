@@ -1,6 +1,7 @@
 import http from 'http';
 import https from 'https';
 import url from 'url';
+import {ProgressStream} from '@/lib/install/helpers';
 import * as tarWrapper from '../commandWrappers/tarWrapper';
 import * as errors from '../errors';
 import {Compression} from '@/lib/commandWrappers/tarWrapper';
@@ -89,9 +90,19 @@ export async function pull(hash: string, options: HttpOptions) {
                     return;
                 }
 
+
+                const contentLengthHeader = res.headers['content-length'];
+                const contentLength = typeof contentLengthHeader === 'string' ?
+                    (parseInt(contentLengthHeader, 10)) : undefined;
+
                 const tarWrapperToken: ControlToken = {};
 
-                tarWrapper.extractArchiveFromStream(res, {controlToken: tarWrapperToken})
+                const progressStream = new ProgressStream({}, 'http pull',  contentLength);
+
+                res.pipe(progressStream);
+
+
+                tarWrapper.extractArchiveFromStream(progressStream, {controlToken: tarWrapperToken})
                     .then(() => {
                         if (!done) {
                             resolve();

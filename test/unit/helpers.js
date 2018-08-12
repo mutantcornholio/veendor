@@ -1,8 +1,10 @@
 'use strict';
-
 const fsExtra = require('fs-extra');
 const path = require('path');
 const stream = require('stream');
+
+const {getLogger} = require('@/lib/logger');
+const wrapperHelpers = require('@/lib/commandWrappers/helpers');
 
 function fakeBackendConfig(alias) {
     return {
@@ -153,6 +155,15 @@ function fakeCreateStreamArchive(inputPaths, compressionType, {controlToken = {}
     };
 }
 
+function mockGetOutput(sandbox) {
+    sandbox.stub(wrapperHelpers, 'getOutput').callsFake((executable, args) => {
+        const commandName = `[${executable} ${args.join(' ')}]`;
+
+        console.error(`${commandName} is being executed! Looks lile someone doesn't mock the env properly`);
+        return Promise.reject(new Error('waaat'));
+    });
+}
+
 module.exports = {
     fakeBackendConfig,
     createNodeModules,
@@ -167,4 +178,5 @@ module.exports = {
     DevNullStream,
     fakeExtractArchiveFromStream,
     fakeCreateStreamArchive,
+    mockGetOutput,
 };

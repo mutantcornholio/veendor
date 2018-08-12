@@ -1,7 +1,7 @@
 import * as helpers from './helpers';
 
 export function syncDirs(from: string, to: string) {
-    return helpers.getOutput('rsync', ['-az', '--delete', from, to]);
+    return helpers.getOutput('rsync', ['-a', '--delete', from, to]);
 }
 
 export function rsyncAvailable(): Promise<boolean> {

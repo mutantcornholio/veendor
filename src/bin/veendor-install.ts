@@ -16,6 +16,9 @@ program
     .description('Download and install node_modules')
     .option('-f, --force', 'overwrite node_modules if it already exists')
     .option('-c --config [configuration-file]')
+    .option('-r --rsync', 'download node_modules into tmpdir \n' +
+        'and then rsync --delete them to working directory\n' +
+        'somewhat slower, but you-know-which IDE won\'t go crazy reindexing it')
     .option('--debug', 'don\'t remove .veendor-debug.log')
     .option('-v --verbose', 'Verbose output. Could be from `-v` to `-vvv`', increaseVerbosity, 0)
     .parse(process.argv);
@@ -34,7 +37,7 @@ resolveConfig(program.config)
         config = resolvedConfig;
         const lockfilePath = await resolveLockfile();
 
-        await install({force: Boolean(program.force), config, lockfilePath, rePull: false, rePullHash: null});
+        await install({force: Boolean(program.force), config, lockfilePath, rsyncMode: program.rsync});
 
         if (!(program.debug)) {
             await fsExtra.remove(path.resolve(process.cwd(), '.veendor-debug.log'));

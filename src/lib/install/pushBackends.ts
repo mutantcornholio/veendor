@@ -10,7 +10,7 @@ export default async function pushBackends(
 
     const pushingBackends = backendConfigs.filter(backend => backend.push);
 
-    if (pushingBackends.length === 0) {
+    if (pushingBackends.length === 0 && backendConfigs.length > 0) {
         logger.info(`No backends with push: true found. Exiting`);
     }
 

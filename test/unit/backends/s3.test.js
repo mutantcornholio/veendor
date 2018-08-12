@@ -6,6 +6,7 @@ const mockfs = require('mock-fs');
 const nock = require('nock');
 const fs = require('fs');
 const AWS = require('aws-sdk');
+const {Stream} = require('stream');
 
 const assert = chai.assert;
 chai.use(chaiAsPromised);
@@ -58,7 +59,15 @@ describe('s3 backend', () => {
         bundleStream = new SuccessfulStream();
 
         fakeS3UploadError = null;
-        fakeS3HeadResultPromise = null;
+        fakeS3HeadResultPromise = Promise.resolve({
+            AcceptRanges: 'bytes',
+            LastModified: new Date(),
+            ContentLength: 5552,
+            ETag: '"751d74b0c8051a560243092d2d5a53df"',
+            ContentType: 'application/octet-stream',
+            Metadata: {},
+        });
+
         fakeS3 = {
             getObject() {
                 return {
@@ -133,7 +142,7 @@ describe('s3 backend', () => {
                 Key: `${fakeHash}.tar.gz`,
             }).callThrough();
 
-            s3Backend.pull(fakeHash, defaultOptions, '.veendor/s3')
+            return s3Backend.pull(fakeHash, defaultOptions, '.veendor/s3')
                 .then(() => s3Mock.verify());
         });
 
@@ -142,7 +151,7 @@ describe('s3 backend', () => {
             tarWrapperExctractArchiveFromStreamStub.restore();
             const tarWrapperMock = sandbox.mock(tarWrapper)
                 .expects('extractArchiveFromStream')
-                .withArgs(bundleStream)
+                .withArgs(sinon.match.instanceOf(Stream))
                 .callsFake(fakeExtractArchiveFromStream);
 
             return s3Backend.pull(fakeHash, defaultOptions, '.veendor/s3')
@@ -202,8 +211,9 @@ describe('s3 backend', () => {
         });
 
         it('should create streamArchive and call s3.upload with it', () => {
+            fakeS3HeadResultPromise = null;
             const controlToken = {};
-            const {stream} = fakeCreateStreamArchive('node_moudles', 'gz', {controlToken});
+            fakeCreateStreamArchive('node_moudles', 'gz', {controlToken});
 
             const s3Mock = sandbox.mock(defaultOptions.__s3);
 
@@ -211,13 +221,14 @@ describe('s3 backend', () => {
                 Bucket: 'mybucket',
                 Key: `${fakeHash}.tar.gz`,
                 ACL: defaultOptions.objectAcl,
-                Body: stream,
+                Body: sinon.match.instanceOf(Stream),
             }).callThrough();
 
-            s3Backend.push(fakeHash, defaultOptions, '.veendor/s3').then(() => s3Mock.verify());
+            return s3Backend.push(fakeHash, defaultOptions, '.veendor/s3').then(() => s3Mock.verify());
         });
 
         it('should reject with BundleUploadError if s3 upload fails', done => {
+            fakeS3HeadResultPromise = null;
             fakeS3UploadError = new AnError('wat');
 
             assert.isRejected(s3Backend.push(fakeHash, defaultOptions, '.veendor/s3'), s3Backend.BundleUploadError)

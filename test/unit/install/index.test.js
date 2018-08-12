@@ -25,8 +25,7 @@ let fakeSha1;
 let sandbox;
 let fakeBackends;
 let config;
-let npmWrapperInstallAllStub;
-let rsyncWrapperAvailabilityStub;
+let gitWrapperIsGitRepoStub;
 let createCleanCacheDirStub;
 let resultDir;
 
@@ -44,15 +43,17 @@ describe('install', () => {
         sandbox = sinon.sandbox.create();
         process.chdir(originalCwd);
 
+        helpers.mockGetOutput(sandbox);
+
         fakeBackends = [helpers.fakeBackendConfig('fakeBackends[0]'), helpers.fakeBackendConfig('fakeBackends[1]')];
         fakeBackends[0].backend.pull = () => Promise.reject(new errors.BundleNotFoundError);
 
-        npmWrapperInstallAllStub = sandbox.stub(npmWrapper, 'installAll').resolves();
-
-        rsyncWrapperAvailabilityStub = sandbox.stub(rsyncWrapper, 'rsyncAvailable').resolves(false);
+        sandbox.stub(npmWrapper, 'installAll').resolves();
+        sandbox.stub(rsyncWrapper, 'rsyncAvailable').resolves(false);
+        sandbox.stub(rsyncWrapper, 'syncDirs').resolves();
 
         resultDir = path.join(installHelpers.getTmpDir(), '__result');
-
+        gitWrapperIsGitRepoStub = sandbox.stub(gitWrapper, 'isGitRepo').callsFake(() => Promise.resolve(true));
         createCleanCacheDirStub = sandbox.stub(installHelpers, 'createCleanCacheDir')
             .callsFake(fakeCreateCleanCacheDir);
 
@@ -186,48 +187,6 @@ describe('install', () => {
         });
     });
 
-    it('should create temp cwd for backends', done => {
-        sandbox.stub(fakeBackends[0].backend, 'pull')
-            .callsFake(() => {
-                helpers.notifyAssert(() => assert(fsExtra.statSync(resultDir).isDirectory()), done);
-                return helpers.createNodeModules();
-            });
-
-        install({config});
-    });
-
-    it('should clear result directory before calling', () => {
-        mockfs({
-            'package.json': JSON.stringify(PKGJSON),
-            [resultDir]: {
-                'some': 'trash',
-            },
-        });
-
-        sandbox.stub(fakeBackends[0].backend, 'pull')
-            .callsFake(() => {
-                assert.throws(
-                    () => fsExtra.statSync(path.resolve(resultDir, 'some')),
-                    'no such file or directory'
-                );
-
-                return helpers.createNodeModules();
-            });
-
-        return install({config});
-    });
-
-    it('should change cwd on backend `pull` call and change it back afterwards', () => {
-        const originalCwd = process.cwd();
-        sandbox.stub(fakeBackends[0].backend, 'pull')
-            .callsFake(() => {
-                assert.equal(process.cwd(), resultDir);
-                return helpers.createNodeModules();
-            });
-
-        return install({config}).then(() => assert.equal(process.cwd(), originalCwd));
-    });
-
     it('should stop calling `pull` if backend fails with generic error', done => {
         mockfs({
             'package.json': JSON.stringify(PKGJSON)
@@ -248,46 +207,152 @@ describe('install', () => {
         }).then(checkResult, checkResult);
     });
 
-    it('should copy node_modules from local temp cwd to original place', () => {
-        return install({config}).then(() => assert.equal(
-            fsExtra.readFileSync(path.join(originalCwd, 'node_modules', 'foobar')),
-            'deadbeef'
-        ));
-    });
+    describe('rsync mode', () => {
+        let installParams;
+        beforeEach(() => {
+            rsyncWrapper.rsyncAvailable.restore();
+            sandbox.stub(rsyncWrapper, 'rsyncAvailable').resolves(true);
 
-    it('should rsync node_modules from local temp cwd to original place if rsync is available', () => {
-        rsyncWrapperAvailabilityStub.restore();
-        const rsyncWrapperMock = sandbox.mock(rsyncWrapper);
+            installParams = {
+                config,
+                rsyncMode: true,
+                force: true,
+            };
 
-        rsyncWrapperMock
-            .expects('rsyncAvailable')
-            .resolves(true);
-
-        rsyncWrapperMock
-            .expects('syncDirs')
-            .withArgs(path.join(resultDir, 'node_modules'), originalCwd)
-            .resolves();
-
-
-        return install({config}).then(() => {
-            rsyncWrapperMock.verify();
+            mockfs({
+                'node_modules': {some: {stuff: 'inside'}},
+                'package.json': JSON.stringify(PKGJSON)
+            });
         });
-    });
 
-    it('should not call rsyncWrapper.syncDirs if rsync is not available', () => {
-        rsyncWrapperAvailabilityStub.restore();
-        const rsyncWrapperMock = sandbox.mock(rsyncWrapper);
+        it('should not engage in rsync mode if rsync is not available', () => {
+            rsyncWrapper.rsyncAvailable.restore();
+            rsyncWrapper.syncDirs.restore();
+            const rsyncWrapperMock = sandbox.mock(rsyncWrapper);
 
-        rsyncWrapperMock
-            .expects('rsyncAvailable')
-            .resolves(false);
+            rsyncWrapperMock
+                .expects('rsyncAvailable')
+                .resolves(false);
 
-        rsyncWrapperMock
-            .expects('syncDirs')
-            .never();
+            rsyncWrapperMock
+                .expects('syncDirs')
+                .never();
 
-        return install({config}).then(() => {
-            rsyncWrapperMock.verify();
+            return install(installParams).then(() => {
+                rsyncWrapperMock.verify();
+            });
+        });
+
+        it('should not engage in rsync mode if there were no node_modules previously left', () => {
+            mockfs({
+                'package.json': JSON.stringify(PKGJSON),
+            });
+            rsyncWrapper.syncDirs.restore();
+            const rsyncWrapperMock = sandbox.mock(rsyncWrapper);
+
+            rsyncWrapperMock
+                .expects('syncDirs')
+                .never();
+
+            return install(installParams).then(() => {
+                rsyncWrapperMock.verify();
+            });
+        });
+
+        it('should not engage in rsync mode if rsync option is false', () => {
+            rsyncWrapper.syncDirs.restore();
+            const rsyncWrapperMock = sandbox.mock(rsyncWrapper);
+
+            rsyncWrapperMock
+                .expects('syncDirs')
+                .never();
+
+            installParams.rsyncMode = false;
+
+            return install(installParams).then(() => {
+                rsyncWrapperMock.verify();
+            });
+        });
+
+        it('should create temp cwd for backends, when in rsync mode', done => {
+            sandbox.stub(fakeBackends[0].backend, 'pull')
+                .callsFake(() => {
+                    helpers.notifyAssert(() => assert(fsExtra.statSync(resultDir).isDirectory()), done);
+                    return helpers.createNodeModules();
+                });
+
+            install(installParams);
+        });
+
+        it('should not create temp cwd for backends, when not in rsync mode', done => {
+            sandbox.stub(fakeBackends[0].backend, 'pull')
+                .callsFake(() => {
+                    helpers.notifyAssert(
+                        () => assert.throws(
+                            () => fsExtra.statSync(resultDir), 'no such file or directory'
+                        ), done);
+                    return helpers.createNodeModules();
+                });
+
+            installParams.rsyncMode= false;
+            install(installParams);
+        });
+
+        it('should clear result directory before calling, when in rsync mode', () => {
+            mockfs({
+                'node_modules': {some: {stuff: 'inside'}},
+                'package.json': JSON.stringify(PKGJSON),
+                [resultDir]: {
+                    'some': 'trash',
+                },
+            });
+
+            sandbox.stub(fakeBackends[0].backend, 'pull')
+                .callsFake(() => {
+                    assert.throws(
+                        () => fsExtra.statSync(path.resolve(resultDir, 'some')),
+                        'no such file or directory'
+                    );
+
+                    return helpers.createNodeModules();
+                });
+
+            return install(installParams);
+        });
+
+        it('should change cwd on backend `pull` call and change it back afterwards, when in rsync mode', () => {
+            const originalCwd = process.cwd();
+            sandbox.stub(fakeBackends[0].backend, 'pull')
+                .callsFake(() => {
+                    assert.equal(process.cwd(), resultDir);
+                    return helpers.createNodeModules();
+                });
+
+            return install(installParams).then(() => assert.equal(process.cwd(), originalCwd));
+        });
+
+        it('should not change cwd on when not in rsync mode', () => {
+            const processMock = sandbox.mock(process)
+                .expects('chdir')
+                .never();
+
+            installParams.rsyncMode = false;
+
+            return install(installParams).then(processMock.verify());
+        });
+
+        it('should rsync node_modules from local temp cwd to original place if rsync is available', () => {
+            rsyncWrapper.syncDirs.restore();
+            const rsyncWrapperMock = sandbox.mock(rsyncWrapper);
+
+            rsyncWrapperMock
+                .expects('syncDirs')
+                .withArgs(path.join(resultDir, 'node_modules'), originalCwd)
+                .resolves();
+
+            return install(installParams).then(() => {
+                rsyncWrapperMock.verify();
+            });
         });
     });
 
@@ -391,7 +456,6 @@ describe('install', () => {
         let fakePkgJson2;
         let pkgJsonStub;
         let gitWrapperOlderRevisionStub;
-        let gitWrapperIsGitRepoStub;
         let npmWrapperInstallStub;
         let olderLockfiles = [
             {content: 'package-lock.json a year ago'},
@@ -448,8 +512,6 @@ describe('install', () => {
 
                     return Promise.reject(new gitWrapper.TooOldRevisionError);
                 });
-
-            gitWrapperIsGitRepoStub = sandbox.stub(gitWrapper, 'isGitRepo').callsFake(() => Promise.resolve(true));
 
             npmWrapperInstallStub = sandbox.stub(npmWrapper, 'install').callsFake(() => Promise.resolve());
 

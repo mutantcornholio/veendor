@@ -10,7 +10,8 @@
     "test": "mocha --file test/setup.js --reporter dot 'test/**/*.test.js'",
     "test_unit": "mocha --file test/setup.js --reporter dot 'test/unit/**/*.test.js'",
     "test_integration": "mocha --file test/setup.js --reporter dot 'test/integration/**/*.test.js'",
-    "postinstall": "ln -snf ../dist node_modules/@"
+    "postinstall": "ln -snf ../dist node_modules/@",
+    "prepublishOnly": "tsc"
   },
   "repository": {
     "type": "git",
@@ -25,6 +26,8 @@
   "dependencies": {
     "@types/fs-extra": "^5.0.4",
     "aws-sdk": "^2.213.1",
+    "cli-progress": "^2.1.0",
+    "colors": "^1.3.1",
     "commander": "^2.16.0",
     "deep-object-diff": "^1.0.4",
     "fs-extra": "^4.0.0",
@@ -33,8 +36,10 @@
     "tracer": "^0.9.1"
   },
   "devDependencies": {
+    "@types/cli-progress": "^1.8.0",
     "@types/lodash": "^4.14.116",
     "@types/node": "^10.5.8",
+    "@types/progress": "^2.0.1",
     "@types/semver": "^5.5.0",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
