@@ -69,7 +69,7 @@ export async function pull(hash: string, options: S3Options, _cachedir: string, 
         if (error.statusCode === 404) {
             throw new errors.BundleNotFoundError();
         } else {
-            throw new BundleDownloadError(error.message);
+            throw new BundleDownloadError(error.stack);
         }
     }
 

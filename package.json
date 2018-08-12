@@ -2,9 +2,8 @@
   "name": "veendor",
   "version": "2.1.0",
   "description": "a tool for stroing your npm dependencies in arbitraty storage",
-  "main": "dist/bin/veendor.js",
   "bin": {
-    "veendor": "./dist/bin/veendor.js"
+    "veendor": "dist/bin/veendor.js"
   },
   "scripts": {
     "test": "mocha --file test/setup.js --reporter dot 'test/**/*.test.js'",
