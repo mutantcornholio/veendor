@@ -27,11 +27,14 @@ const s3Dir = path.resolve(process.cwd(), 'tmp', 'test', 'integration', 's3rver'
 
 const NODE_VERSIONS = [{
     nodeVersion: 'v6.13.0',
-    npmVersions: ['v3.10.10', 'v5.6.0']
+    npmVersions: ['v3.10.10', 'v5.6.0'],
 }, {
     nodeVersion: 'v8.9.4',
-    npmVersions: ['v5.6.0']
-},];
+    npmVersions: ['v5.10.0', 'v6.4.0'],
+}, {
+    nodeVersion: 'v10.9.0',
+    npmVersions: ['v6.4.0'],
+}];
 
 let s3rverInstance;
 let s3Client;
