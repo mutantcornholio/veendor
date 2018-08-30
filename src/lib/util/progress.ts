@@ -28,7 +28,7 @@ export class ProgressStream extends Transform {
         const progressWithTotal = rigthPad(2000, `  ${colors.green(title)} [{bar}]  `
             + `${colors.gray('{_value} / {_total} Mb')}   {percentage}%   {duration_formatted}`);
 
-        const progressWithoutTotal = rigthPad(2000, `  ${colors.green(title)} ${colors.gray('{_value} Mb')}` +
+        const progressWithoutTotal = rigthPad(2000, `  ${colors.green(title)} ${colors.gray(' {_value} Mb')}` +
             `   {duration_formatted}`);
 
         this.progress = new cliProgress.Bar({
@@ -48,14 +48,14 @@ export class ProgressStream extends Transform {
         });
 
         this.on('pipe', () => {
-            if (this.state !== StreamState.bypass) {
+            if (this.state !== StreamState.bypass && this.state !== StreamState.visible) {
                 this.state = StreamState.connected;
             }
         });
 
         this.on('unpipe', () => {
             if (this.state !== StreamState.bypass) {
-                this.hide();
+                this.toggleVisibility(false);
                 this.state = StreamState.preparing;
             }
         });
@@ -108,11 +108,11 @@ export class ProgressStream extends Transform {
         callback(undefined, data);
     }
 
-    show() {
+    private show() {
         this.progress.start(typeof this.total === 'number' ? this.total : 1000, this.completed);
     }
 
-    hide() {
+    private hide() {
         this.progress.stop();
     }
 
