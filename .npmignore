@@ -1,3 +1,6 @@
 /tmp
 /nvm
 /.veendor
+/.idea
+npm-debug.log*
+/test
