@@ -102,7 +102,11 @@ export async function pull(hash: string, options: HttpOptions, _cachedir: string
                 progressStream.toggleVisibility(true);
 
                 const tarWrapperToken: ControlToken = {};
-                tarWrapper.extractArchiveFromStream(progressStream, {controlToken: tarWrapperToken})
+                tarWrapper.extractArchiveFromStream(
+                    progressStream,
+                    options.compression,
+                    {controlToken: tarWrapperToken}
+                )
                     .then(() => {
                         if (!done) {
                             resolve();

@@ -46,7 +46,7 @@ export function createStreamArchive(
     const args = [
         '--create',
         `--${compressionType}`,
-        // '--file',
+        '--file',
         '-',
         ...pathsToAdd,
     ];
@@ -65,8 +65,8 @@ export function createStreamArchive(
     };
 }
 
-export function extractArchiveFromStream(archiveStream: Readable, {controlToken = {}}: {controlToken: ControlToken}) {
-    const args = ['--extract', '--file', '-'];
+export function extractArchiveFromStream(archiveStream: Readable, compressionType: Compression, {controlToken = {}}: {controlToken: ControlToken}) {
+    const args = ['--extract', `--${compressionType}`, '--file', '-'];
 
     const procPromise = helpers.getOutput('tar', args, {
         stdout: StdioPolicy.pipe, stderr: StdioPolicy.pipe, controlToken

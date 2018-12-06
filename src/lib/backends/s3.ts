@@ -83,7 +83,11 @@ export async function pull(hash: string, options: S3Options, _cachedir: string, 
         downloadStream.once('readable', () => {
             logger.trace('[s3 pull] downloadStream is readable');
             downloadStream.pipe(progressStream);
-            tarWrapper.extractArchiveFromStream(progressStream, {controlToken: tarWrapperToken}).then(resolve, reject);
+            tarWrapper.extractArchiveFromStream(
+                progressStream,
+                options.compression,
+                {controlToken: tarWrapperToken}
+            ).then(resolve, reject);
             progressStream.toggleVisibility(true);
 
         })
