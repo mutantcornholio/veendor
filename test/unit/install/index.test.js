@@ -130,7 +130,7 @@ describe('install', () => {
 
         return install({force: true, config}).then(() => assert.throws(
             () => fsExtra.statSync(path.join(process.cwd(), 'node_modules', 'some')),
-            'no such file or directory'
+            'ENOENT'
         ));
     });
 
@@ -289,7 +289,7 @@ describe('install', () => {
                 .callsFake(() => {
                     helpers.notifyAssert(
                         () => assert.throws(
-                            () => fsExtra.statSync(resultDir), 'no such file or directory'
+                            () => fsExtra.statSync(resultDir), 'ENOENT'
                         ), done);
                     return helpers.createNodeModules();
                 });
@@ -311,7 +311,7 @@ describe('install', () => {
                 .callsFake(() => {
                     assert.throws(
                         () => fsExtra.statSync(path.resolve(resultDir, 'some')),
-                        'no such file or directory'
+                        'ENOENT'
                     );
 
                     return helpers.createNodeModules();
@@ -341,7 +341,7 @@ describe('install', () => {
             return install(installParams).then(processMock.verify());
         });
 
-        it('should rsync node_modules from local temp cwd to original place if rsync is available', () => {
+        it('should rsync node_modules from local temp cwd to origп ыеinal place if rsync is available', () => {
             rsyncWrapper.syncDirs.restore();
             const rsyncWrapperMock = sandbox.mock(rsyncWrapper);
 
