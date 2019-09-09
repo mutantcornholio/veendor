@@ -48,15 +48,28 @@ export async function isGitLfsAvailable() {
 export async function olderRevision(
     gitDirectory: string, filenames: Array<string | null>, age: number
 ): Promise<Array<string | null>> {
+    const gitRoot = await resolveGitRoot(gitDirectory);
+
     const relativeFilenames = filenames.map(filename => {
-        return typeof filename === 'string' ? path.relative(gitDirectory, filename): null;
+        if (typeof filename === 'string') {
+            if (!path.isAbsolute(filename)) {
+                return path.relative(gitRoot, path.resolve(gitDirectory, filename));
+            }
+
+            return path.relative(gitRoot, filename);
+        }
+
+        return null;
     });
 
     const gitArgs = ['--no-pager', 'log', `-${age}`, '--pretty=format:%h'].concat(
         relativeFilenames.filter(filename => typeof filename === 'string') as string[]
     );
 
-    const revisionsText = await helpers.getOutput('git', gitArgs);
+    const revisionsText = await helpers.getOutput('git', gitArgs, {
+        cwd: gitRoot,
+    });
+
     const revisions = revisionsText.trim().split('\n');
 
     if (revisions.length < age) {
@@ -67,7 +80,10 @@ export async function olderRevision(
         if (typeof filename === 'string') {
             return helpers.getOutput(
                 'git',
-                ['--no-pager', 'show', revisions[revisions.length - 1] + ':' + filename]
+                ['--no-pager', 'show', revisions[revisions.length - 1] + ':' + filename],
+                {
+                    cwd: gitRoot,
+                }
             );
         } else {
             return Promise.resolve(null);
@@ -151,4 +167,8 @@ export async function resetToRemote(gitDirectory: string, branch: string) {
                 {cwd: gitDirectory, stdout: StdioPolicy.copy, stderr: StdioPolicy.inherit}
             )
         );
+}
+
+async function resolveGitRoot(directory: string): Promise<string> {
+    return (await helpers.getOutput('git', ['rev-parse', '--show-toplevel'], {cwd: directory})).trim();
 }

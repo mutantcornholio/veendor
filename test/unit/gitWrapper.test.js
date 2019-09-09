@@ -133,6 +133,8 @@ describe('gitWrapper', () => {
             sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args.some(arg => arg === '--pretty=format:%h')) {
                     return Promise.resolve('43485c2\n8638279\n12312a\n1231241\n');
+                } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
+                    return Promise.resolve(process.cwd());
                 }
 
                 return Promise.reject(new Error(`mock me, bitch! args: ${args}`));
@@ -147,6 +149,8 @@ describe('gitWrapper', () => {
             sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args.some(arg => arg === '--pretty=format:%h')) {
                     return Promise.resolve('43485c2\n8638279\n');
+                } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
+                    return Promise.resolve(process.cwd());
                 } else if (executable === 'git' && args[1] === 'show') {
                     notifyAssert(() => {
                         assert.equal(args[2], '8638279:test');
@@ -165,6 +169,8 @@ describe('gitWrapper', () => {
             sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args.some(arg => arg === '--pretty=format:%h')) {
                     return Promise.resolve('43485c2\n8638279\n');
+                } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
+                    return Promise.resolve(process.cwd());
                 } else if (executable === 'git' && args[1] === 'show') {
                     notifyAssert(() => {
                         assert.equal(args[2], '8638279:test');
@@ -183,6 +189,8 @@ describe('gitWrapper', () => {
             sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args.some(arg => arg === '--pretty=format:%h')) {
                     return Promise.resolve('43485c2\n8638279\n');
+                } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
+                    return Promise.resolve(process.cwd());
                 } else if (executable === 'git' && args[1] === 'show' && args[2] === '8638279:foo') {
                     return Promise.resolve('Foo once was like this.\nCan you imagine?\n');
                 } else if (executable === 'git' && args[1] === 'show' && args[2] === '8638279:bar') {
@@ -209,6 +217,8 @@ describe('gitWrapper', () => {
                     }, done);
 
                     return Promise.resolve('43485c2\n8638279\n');
+                } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
+                    return Promise.resolve(process.cwd());
                 } else if (executable === 'git' && args[1] === 'show') {
                     return Promise.resolve('this is elder file.\nShow some respect.\n');
                 }
@@ -227,6 +237,8 @@ describe('gitWrapper', () => {
                         assert.equal(args[5], 'foo_bar');
                     }, done);
                     return Promise.resolve('43485c2\n8638279\n');
+                } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
+                    return Promise.resolve(process.cwd());
                 } else if (executable === 'git' && args[1] === 'show') {
                     return Promise.resolve('this is elder file.\nShow some respect.\n');
                 }
@@ -241,6 +253,8 @@ describe('gitWrapper', () => {
             sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[1] === 'log') {
                     return Promise.resolve('43485c2\n8638279\n');
+                } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
+                    return Promise.resolve(process.cwd());
                 } else if (executable === 'git' && args[1] === 'show') {
                     if (args[2] === '8638279:test_file') {
                         return Promise.resolve('elder test_file');
@@ -255,6 +269,48 @@ describe('gitWrapper', () => {
             const result = gitWrapper.olderRevision(process.cwd(), ['test_file', null, 'foo_bar'], 2);
 
             assert.becomes(result, ['elder test_file', null, 'elder foo_bar']).notify(done);
+        });
+
+        it('should resolve correct file for not toplevel files', done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[1] === 'log') {
+                    return Promise.resolve('43485c2\n8638279\n');
+                } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
+                    return Promise.resolve(process.cwd());
+                } else if (executable === 'git' && args[1] === 'show') {
+                    if (args[2] === '8638279:test_dir/test_file') {
+                        return Promise.resolve('elder nested test_file');
+                    } else if (args[2] === '8638279:test_file') {
+                        return Promise.resolve('elder toplevel foo_bar');
+                    }
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! executable: ${executable}, args: ${args}`));
+            });
+
+            const result = gitWrapper.olderRevision(path.join(process.cwd(), '/test_dir'), ['test_file'], 2);
+
+            assert.becomes(result, ['elder nested test_file']).notify(done);
+        });
+
+        it('should resolve correct file for absolute file paths', done => {
+            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                if (executable === 'git' && args[1] === 'log') {
+                    return Promise.resolve('43485c2\n8638279\n');
+                } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
+                    return Promise.resolve('/git_root');
+                } else if (executable === 'git' && args[1] === 'show') {
+                    if (args[2] === '8638279:test_file') {
+                        return Promise.resolve('elder foo_bar');
+                    }
+                }
+
+                return Promise.reject(new Error(`mock me, bitch! executable: ${executable}, args: ${args}`));
+            });
+
+            const result = gitWrapper.olderRevision(path.join('/git_root'), ['/git_root/test_file'], 2);
+
+            assert.becomes(result, ['elder foo_bar']).notify(done);
         });
     });
 
