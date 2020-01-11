@@ -9,7 +9,7 @@ cd repolocal
 export TEST_DIR="$tmpdir/local"
 mkdir -p $TEST_DIR
 
-find "/Users/cornholio/dev/veendor/test/integration/testCases/noSave" -type f -maxdepth 1 -print0 | xargs -0 -I{} -n1 cp "{}" .
+find "$testdir/integration/testCases/noSave" -type f -maxdepth 1 -print0 | xargs -0 -I{} -n1 cp "{}" .
 
 run_iteration() {
     cp package.json package.json.bak

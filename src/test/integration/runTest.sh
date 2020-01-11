@@ -14,7 +14,7 @@ create_empty_repo () {
 }
 
 rootdir="$(pwd)/dist"
-testdir="$(pwd)/test"
+testdir="$(pwd)/dist/test"
 dirname="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 testcase="$1"
 tmpdir="$2"

@@ -1,18 +1,18 @@
 'use strict';
 
-const {describe, it, before, after} = require('mocha');
-const chai = require('chai');
-const chaiAsPromised = require('chai-as-promised');
-const fsExtra = require('fs-extra');
-const _ = require('lodash');
-const crypto = require('crypto');
-const os = require('os');
-const path = require('path');
-const AWS = require('aws-sdk');
-const S3rver = require('s3rver');
+import {after, before, describe, it} from 'mocha';
+import chai from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+import fsExtra from 'fs-extra';
+import _ from 'lodash';
+import crypto from 'crypto';
+import os from 'os';
+import path from 'path';
+import AWS from 'aws-sdk';
+import S3rver from 's3rver';
 
-const helpers = require('@/lib/commandWrappers/helpers');
-const {getTmpDir} = require('@/lib/install/helpers');
+import {CommandError} from '@/lib/commandWrappers/helpers';
+import * as helpers from '@/lib/commandWrappers/helpers';
 
 chai.use(chaiAsPromised);
 
@@ -21,8 +21,8 @@ chai.use(chaiAsPromised);
  * Test cases are written in bash.
  */
 
-const TEST_SCRIPT = 'test/integration/runTest.sh';
-const PREPARE_NVM_SCRIPT = 'test/integration/prepareNvm.sh';
+const TEST_SCRIPT = 'dist/test/integration/runTest.sh';
+const PREPARE_NVM_SCRIPT = 'dist/test/integration/prepareNvm.sh';
 const s3Dir = path.resolve(process.cwd(), 'tmp', 'test', 'integration', 's3rver');
 
 const NODE_VERSIONS = [{
@@ -39,8 +39,7 @@ const NODE_VERSIONS = [{
     npmVersions: ['v6.13.4'],
 }];
 
-let s3rverInstance;
-let s3Client;
+let s3rverInstance: S3rver;
 
 describe('veendor', function () {
     before(function (done) {
@@ -85,7 +84,7 @@ describe('veendor', function () {
                 return done(err);
             }
 
-            s3Client = new AWS.S3({
+            new AWS.S3({
                 endpoint: `http://localhost:14569`,
                 accessKeyId: "123",
                 secretAccessKey: "abc",
@@ -162,13 +161,13 @@ describe('veendor', function () {
             return runBashTest('calcHashWithShrinkWrap');
         });
 
-        xit('shoud return hash on package.json + yarn.lock', done => {
-            runBashTest('calcHashWithYarnLock', done);
+        xit('shoud return hash on package.json + yarn.lock', () => {
+            return runBashTest('calcHashWithYarnLock');
         });
     });
 });
 
-function runBashTest(testCase) {
+function runBashTest(testCase: string) {
     const testPromises = [];
     const remainingVersions = _.cloneDeep(NODE_VERSIONS);
 
@@ -187,7 +186,7 @@ function runBashTest(testCase) {
     return Promise.all(testPromises);
 }
 
-function executeBashTest(testCase, nodeVersion, npmVersion) {
+function executeBashTest(testCase: string, nodeVersion: string, npmVersion: string) {
     return new Promise((resolve, reject) => {
         const testDir = path.resolve(
             process.cwd(), 'tmp', 'test', 'integration', testCase, `${nodeVersion}-${npmVersion}`
@@ -205,7 +204,7 @@ function executeBashTest(testCase, nodeVersion, npmVersion) {
                 {timeoutDuration: 40000}
             ).then(() => {
                     resolve();
-            }, error => {
+            }, (error: CommandError) => {
                 if (error.output) {
                     const outPath = path.resolve(testDir, 'output.txt');
                     fsExtra.ensureDirSync(testDir);

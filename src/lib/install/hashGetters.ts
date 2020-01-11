@@ -3,7 +3,7 @@ import {Config, ConfigWithHistory, PkgJson} from '@/types';
 import {getLogger} from '@/lib/util/logger';
 import * as gitWrapper from '@/lib/commandWrappers/gitWrapper';
 import * as pkgJsonUtils from '@/lib/pkgjson';
-import {BundlesNotFoundError} from '@/lib/install/index';
+import {BundlesNotFoundError, PkgJsonNotFoundError} from '@/lib/install/index';
 import * as helpers from '@/lib/install/helpers';
 
 const {pkgJsonPath, originalCwd} = helpers.paths;
@@ -63,6 +63,12 @@ export async function getFSHash(
 
             logger.trace('Parsing package.json');
             return pkgJsonUtils.parsePkgJson(pkgJsonString);
+        }, (err: Error | NodeJS.ErrnoException) => {
+            if (isNodeJSException(err) && err.code === 'ENOENT') {
+                throw new PkgJsonNotFoundError('Couldn\'t find package.json file');
+            }
+            throw err;
+
         }));
 
     if (lockfilePath !== null) {
@@ -86,5 +92,9 @@ export async function getFSHash(
     logger.trace('Calculating hash');
     const hash = pkgJsonUtils.calcHash(pkgJson, lockfileContents, config.packageHash);
     return {hash, pkgJson: pkgJson};
+}
+
+function isNodeJSException(err: Error | NodeJS.ErrnoException): err is NodeJS.ErrnoException {
+    return (err as NodeJS.ErrnoException).code !== undefined;
 }
 

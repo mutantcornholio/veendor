@@ -1,40 +1,44 @@
-const {describe, it, beforeEach, afterEach} = require('mocha');
-const chai = require('chai');
-const chaiAsPromised = require('chai-as-promised');
-const sinon = require('sinon');
-const mockfs = require('mock-fs');
-const nock = require('nock');
-const fs = require('fs');
-const AWS = require('aws-sdk');
-const {Stream} = require('stream');
+import {afterEach, beforeEach, describe, it} from 'mocha';
 
-const assert = chai.assert;
-chai.use(chaiAsPromised);
 
-const s3Backend = require('@/lib/backends/s3');
-const tarWrapper = require('@/lib/commandWrappers/tarWrapper');
-const errors = require('@/lib/errors');
-const {
-    AWSError,
+import chai from 'chai';
+import chaiAsPromised from 'chai-as-promised';
+import sinon from 'sinon';
+import mockfs from 'mock-fs';
+import nock from 'nock';
+import fs from 'fs';
+import AWS from 'aws-sdk';
+import {Stream} from 'stream';
+
+
+import * as s3Backend from '@/lib/backends/s3';
+import * as tarWrapper from '@/lib/commandWrappers/tarWrapper';
+import * as errors from '@/lib/errors';
+import {
     AnError,
+    AWSError,
     SuccessfulStream,
     FailingStream,
     DevNullStream,
     fakeExtractArchiveFromStream,
     fakeCreateStreamArchive,
-    makeFakeBackendToolsProvider,
-} = require('../helpers');
+    makeFakeBackendToolsProvider
+} from '../helpers';
+import {S3Options} from '@/lib/backends/s3';
 
-let sandbox;
-let fakeHash;
-let defaultOptions;
+const assert = chai.assert;
+chai.use(chaiAsPromised);
+
+let sandbox: sinon.SinonSandbox;
+let fakeHash: string;
+let defaultOptions: S3Options;
 let mockfsConfig;
-let bundleStream;
-let fakeS3;
-let fakeS3UploadError;
-let fakeS3HeadResultPromise;
-let tarWrapperCreateArchiveStub;
-let tarWrapperExctractArchiveFromStreamStub;
+let bundleStream: NodeJS.ReadableStream;
+let fakeS3: AWS.S3;
+let fakeS3UploadError: Error | null;
+let fakeS3HeadResultPromise: Promise<{}> | null;
+let tarWrapperCreateArchiveStub: sinon.SinonStubbedMember<typeof tarWrapper.createStreamArchive>;
+let tarWrapperExctractArchiveFromStreamStub: sinon.SinonStubbedMember<typeof tarWrapper.extractArchiveFromStream>;
 
 
 describe('s3 backend', () => {
@@ -42,7 +46,7 @@ describe('s3 backend', () => {
         // AWS uses dynamic require's, so we'll populate require cache to be able to use mockfs later
         fs.readdirSync('node_modules/aws-sdk/apis')
             .filter(file => file.endsWith('.json'))
-            .map(file => require(`../../../node_modules/aws-sdk/apis/${file}`));
+            .map(file => require(`aws-sdk/apis/${file}`));
     });
     
     beforeEach(() => {
@@ -69,7 +73,9 @@ describe('s3 backend', () => {
             Metadata: {},
         });
 
+
         fakeS3 = {
+            // @ts-ignore
             getObject() {
                 return {
                     createReadStream() {
@@ -77,7 +83,8 @@ describe('s3 backend', () => {
                     }
                 };
             },
-            upload(params) {
+            // @ts-ignore
+            upload(params: {Body: Buffer|Uint8Array|Blob|string|Readable}) {
                 params.Body.pipe(new DevNullStream());
 
                 return {
@@ -92,11 +99,12 @@ describe('s3 backend', () => {
                     }
                 }
             },
+            // @ts-ignore
             headObject() {
                 return {
                     promise() {
                         if (fakeS3HeadResultPromise === null) {
-                            return Promise.reject(new AWSError(null, 404, 'NotFound'));
+                            return Promise.reject(new AWSError('some error', 'NotFound', 404));
                         } else {
                             return fakeS3HeadResultPromise;
                         }
@@ -150,8 +158,8 @@ describe('s3 backend', () => {
         it('should pipe response stream to tar', () => {
             tarWrapperCreateArchiveStub.restore();
             tarWrapperExctractArchiveFromStreamStub.restore();
-            const tarWrapperMock = sandbox.mock(tarWrapper)
-                .expects('extractArchiveFromStream')
+            const tarWrapperMock = sandbox.mock(tarWrapper);
+            tarWrapperMock.expects('extractArchiveFromStream')
                 .withArgs(sinon.match.instanceOf(Stream))
                 .callsFake(fakeExtractArchiveFromStream);
 
@@ -169,7 +177,7 @@ describe('s3 backend', () => {
         });
 
         it('should reject with BundleNotFoundError if stream fails with NoSuchKey', () => {
-            bundleStream = new FailingStream(new AWSError('The specified key does not exist.', 404, 'NoSuchKey'));
+            bundleStream = new FailingStream(new AWSError('The specified key does not exist.', 'NoSuchKey', 404));
 
             return assert.isRejected(
                 s3Backend.pull(fakeHash, defaultOptions, '.veendor/s3', makeFakeBackendToolsProvider()),
@@ -222,7 +230,7 @@ describe('s3 backend', () => {
         it('should create streamArchive and call s3.upload with it', () => {
             fakeS3HeadResultPromise = null;
             const controlToken = {};
-            fakeCreateStreamArchive('node_moudles', 'gz', {controlToken});
+            fakeCreateStreamArchive(['node_moudles'], 'gzip', {controlToken});
 
             const s3Mock = sandbox.mock(defaultOptions.__s3);
 
@@ -255,6 +263,7 @@ describe('s3 backend', () => {
         });
 
         it('checks valid compression', () => {
+            // @ts-ignore
             defaultOptions.compression = 'lsda';
 
             assert.throws(() => {
@@ -296,9 +305,8 @@ describe('s3 backend', () => {
 
         it('creates AWS instance with passed AWS options and fixed API version', () => {
             const awsMock = sandbox.mock(AWS);
-            defaultOptions.s3Options = {
-                foo: 'bar',
-            };
+            // @ts-ignore
+            defaultOptions.s3Options = {foo: 'bar'};
 
             awsMock.expects('S3').withArgs({
                 foo: 'bar',

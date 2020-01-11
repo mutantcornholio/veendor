@@ -1,20 +1,17 @@
-const _ = require('lodash');
-const chai = require('chai');
-const path = require('path');
-const sinon = require('sinon');
-const chaiAsPromised = require('chai-as-promised');
+import _ from 'lodash';
+import chai from 'chai';
+import path from 'path';
+import sinon from 'sinon';
+import chaiAsPromised from 'chai-as-promised';
+import * as gitWrapper from '@/lib/commandWrappers/gitWrapper';
+import * as commandWrappers from '@/lib/commandWrappers/helpers';
+import {AnError, notifyAssert} from './helpers';
 
 const assert = chai.assert;
 chai.use(chaiAsPromised);
 
-const gitWrapper = require('@/lib/commandWrappers/gitWrapper');
-const helpers = require('@/lib/commandWrappers/helpers');
-const {notifyAssert, AnError} = require('./helpers');
-
-let config;
-
 describe('gitWrapper', () => {
-    let sandbox;
+    let sandbox: sinon.SinonSandbox;
 
     beforeEach(() => {
         sandbox = sinon.sandbox.create();
@@ -25,8 +22,8 @@ describe('gitWrapper', () => {
     });
 
     describe('.isGitLfsAvailable', () => {
-        it('should reject with GitLfsNotAvailableError if `git lfs` returns non-zero', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+        it('should reject with GitLfsNotAvailableError if `git lfs` returns non-zero', () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[0] === 'lfs') {
                     return Promise.reject('\'lfs\' is not a git command.\n');
                 }
@@ -36,12 +33,12 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.isGitLfsAvailable();
 
-            assert.isRejected(result, gitWrapper.GitLfsNotAvailableError).notify(done);
+            return assert.isRejected(result, gitWrapper.GitLfsNotAvailableError);
         });
 
         it('should reject with GitLfsNotAvailableError if `git config --list` does not contain `filter.lfs.clean`',
-                done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+            () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[0] === 'lfs') {
                     return Promise.resolve('watwat');
                 } else if (executable === 'git' && args[0] === 'config' && args[1] === '--list') {
@@ -58,12 +55,12 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.isGitLfsAvailable();
 
-            assert.isRejected(result, gitWrapper.GitLfsNotAvailableError).notify(done);
+            return assert.isRejected(result, gitWrapper.GitLfsNotAvailableError);
         });
 
         it('should reject with GitLfsNotAvailableError if `git config --list` does not contain `filter.lfs.smudge`',
-                done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[0] === 'lfs') {
                     return Promise.resolve('watwat');
                 } else if (executable === 'git' && args[0] === 'config' && args[1] === '--list') {
@@ -80,12 +77,12 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.isGitLfsAvailable();
 
-            assert.isRejected(result, gitWrapper.GitLfsNotAvailableError).notify(done);
+            return assert.isRejected(result, gitWrapper.GitLfsNotAvailableError);
         });
 
         it('should reject with GitLfsNotAvailableError if `git config --list` does not contain `filter.lfs.process`',
-                done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+                () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[0] === 'lfs') {
                     return Promise.resolve('watwat');
                 } else if (executable === 'git' && args[0] === 'config' && args[1] === '--list') {
@@ -102,11 +99,11 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.isGitLfsAvailable();
 
-            assert.isRejected(result, gitWrapper.GitLfsNotAvailableError).notify(done);
+            return assert.isRejected(result, gitWrapper.GitLfsNotAvailableError);
         });
 
-        it('should fulfill with true if `git lfs` is in place and git lfs hooks are installed', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+        it('should fulfill with true if `git lfs` is in place and git lfs hooks are installed', () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[0] === 'lfs') {
                     return Promise.resolve('watwat');
                 } else if (executable === 'git' && args[0] === 'config' && args[1] === '--list') {
@@ -124,13 +121,13 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.isGitLfsAvailable();
 
-            assert.isFulfilled(result, true).notify(done);
+            return assert.isFulfilled(result);
         });
     });
 
     describe('.olderRevision', () => {
-        it('should reject with TooOldRevisionError if file doen\'t have that amount of revisions', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+        it('should reject with TooOldRevisionError if file doen\'t have that amount of revisions', () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args.some(arg => arg === '--pretty=format:%h')) {
                     return Promise.resolve('43485c2\n8638279\n12312a\n1231241\n');
                 } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
@@ -142,11 +139,11 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.olderRevision(process.cwd(), ['test'], 5);
 
-            assert.isRejected(result, gitWrapper.TooOldRevisionError).notify(done);
+            return assert.isRejected(result, gitWrapper.TooOldRevisionError);
         });
 
         it('should call git show with last line of git log output', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args.some(arg => arg === '--pretty=format:%h')) {
                     return Promise.resolve('43485c2\n8638279\n');
                 } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
@@ -166,7 +163,7 @@ describe('gitWrapper', () => {
         });
 
         it('should call git show with relative filename', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args.some(arg => arg === '--pretty=format:%h')) {
                     return Promise.resolve('43485c2\n8638279\n');
                 } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
@@ -185,8 +182,8 @@ describe('gitWrapper', () => {
             gitWrapper.olderRevision(process.cwd(), [path.join(process.cwd(), 'test')], 2);
         });
 
-        it('should resolve with array of git show outputs', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+        it('should resolve with array of git show outputs', () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args.some(arg => arg === '--pretty=format:%h')) {
                     return Promise.resolve('43485c2\n8638279\n');
                 } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
@@ -201,14 +198,14 @@ describe('gitWrapper', () => {
             });
 
             const result = gitWrapper.olderRevision(process.cwd(), ['foo', 'bar'], 2);
-            assert.becomes(result, [
+            return assert.becomes(result, [
                 'Foo once was like this.\nCan you imagine?\n',
                 'As a kid, bar looked like this.\n',
-            ]).notify(done);
+            ]);
         });
 
         it('should call git log with all files listed', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[1] === 'log') {
                     notifyAssert(() => {
                         assert.equal(args[4], 'test_file');
@@ -230,7 +227,7 @@ describe('gitWrapper', () => {
         });
 
         it('should be null-safe for filenames', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[1] === 'log') {
                     notifyAssert(() => {
                         assert.equal(args[4], 'test_file');
@@ -249,8 +246,8 @@ describe('gitWrapper', () => {
             gitWrapper.olderRevision(process.cwd(), ['test_file', null, 'foo_bar'], 2);
         });
 
-        it('should resolve with null for null-filenames', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+        it('should resolve with null for null-filenames', () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[1] === 'log') {
                     return Promise.resolve('43485c2\n8638279\n');
                 } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
@@ -268,11 +265,11 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.olderRevision(process.cwd(), ['test_file', null, 'foo_bar'], 2);
 
-            assert.becomes(result, ['elder test_file', null, 'elder foo_bar']).notify(done);
+            return assert.becomes(result, ['elder test_file', null, 'elder foo_bar']);
         });
 
-        it('should resolve correct file for not toplevel files', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+        it('should resolve correct file for not toplevel files', () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[1] === 'log') {
                     return Promise.resolve('43485c2\n8638279\n');
                 } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
@@ -290,11 +287,11 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.olderRevision(path.join(process.cwd(), '/test_dir'), ['test_file'], 2);
 
-            assert.becomes(result, ['elder nested test_file']).notify(done);
+            return assert.becomes(result, ['elder nested test_file']);
         });
 
-        it('should resolve correct file for absolute file paths', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+        it('should resolve correct file for absolute file paths', () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[1] === 'log') {
                     return Promise.resolve('43485c2\n8638279\n');
                 } else if (executable === 'git' && args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
@@ -310,15 +307,15 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.olderRevision(path.join('/git_root'), ['/git_root/test_file'], 2);
 
-            assert.becomes(result, ['elder foo_bar']).notify(done);
+            return assert.becomes(result, ['elder foo_bar']);
         });
     });
 
     describe('tag', () => {
-        it('should throw RefAlreadyExistsError when git output shows it', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+        it('should throw RefAlreadyExistsError when git output shows it', () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[0] === 'tag') {
-                    return Promise.reject(new helpers.CommandReturnedNonZeroError(
+                    return Promise.reject(new commandWrappers.CommandReturnedNonZeroError(
                         'Command [git tag] returned 1',
                         'fatal: tag \'veendor-32097f47c59765895b8b9d2002fe40ddc0de38bf-linux\' already exists'
                     ));
@@ -329,15 +326,15 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.tag(process.cwd(), 'veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux');
 
-            assert.isRejected(result, gitWrapper.RefAlreadyExistsError).notify(done);
+            return assert.isRejected(result, gitWrapper.RefAlreadyExistsError);
         });
     });
 
     describe('push', () => {
-        it('should throw RefAlreadyExistsError when git output shows it', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+        it('should throw RefAlreadyExistsError when git output shows it', () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[0] === 'push') {
-                    return Promise.reject(new helpers.CommandReturnedNonZeroError(
+                    return Promise.reject(new commandWrappers.CommandReturnedNonZeroError(
                         'Command [git push] returned 1',
                         'HEAD is now at 7b3abff Initial commit\n' +
                         'Git LFS: (1 of 1 files) 47.46 MB / 47.46 MB\n' +
@@ -358,14 +355,14 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.push(process.cwd(), 'veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux');
 
-            assert.isRejected(result, gitWrapper.RefAlreadyExistsError).notify(done);
+            return assert.isRejected(result, gitWrapper.RefAlreadyExistsError);
         });
 
         it('should throw RefAlreadyExistsError when git responds with cannot lock ref...reference already exists error',
-            done => {
-                sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+            () => {
+                sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                     if (executable === 'git' && args[0] === 'push') {
-                        return Promise.reject(new helpers.CommandReturnedNonZeroError(
+                        return Promise.reject(new commandWrappers.CommandReturnedNonZeroError(
                             'Command [git push] returned 1',
                             'HEAD is now at 7b3abff Initial commit\n' +
                             'Git LFS: (1 of 1 files) 47.46 MB / 47.46 MB\n' +
@@ -388,11 +385,11 @@ describe('gitWrapper', () => {
 
                 const result = gitWrapper.push(process.cwd(), 'veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux');
 
-                assert.isRejected(result, gitWrapper.RefAlreadyExistsError).notify(done);
+                return assert.isRejected(result, gitWrapper.RefAlreadyExistsError);
             });
         
-        it('should throw original generic error from git', done => {
-            sandbox.stub(helpers, 'getOutput').callsFake((executable, args) => {
+        it('should throw original generic error from git', () => {
+            sandbox.stub(commandWrappers, 'getOutput').callsFake((executable, args) => {
                 if (executable === 'git' && args[0] === 'push') {
                     return Promise.reject(new AnError('test'));
                 }
@@ -406,7 +403,7 @@ describe('gitWrapper', () => {
 
             const result = gitWrapper.push(process.cwd(), 'veendor-e00d8185b0bdb7f25d89e79ed779d0b6809bfcd0-linux');
 
-            assert.isRejected(result, AnError).notify(done);
+            return assert.isRejected(result, AnError);
         });
     });
 });

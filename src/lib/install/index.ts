@@ -32,14 +32,15 @@ enum InstallStages {
     pushing,
 }
 
+export type InstallParams = {
+    force?: boolean, // remove node_modules if exist
+    config: Config,
+    lockfilePath?: string | null, // path to lockfile, detected at startup. null, if no lockfile detected
+    rsyncMode?: boolean,
+};
+
 export default async function install(
-    {force = false, config, lockfilePath = null, rsyncMode = false}:
-    {
-        force: boolean, // remove node_modules if exist
-        config: Config,
-        lockfilePath: string | null, // path to lockfile, detected at startup. null, if no lockfile detected
-        rsyncMode: boolean,
-    }
+    {force = false, config, lockfilePath = null, rsyncMode = false}: InstallParams
 ): Promise<void> {
     const logger = getLogger();
 

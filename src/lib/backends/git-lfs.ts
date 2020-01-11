@@ -7,10 +7,13 @@ import {Compression} from '@/lib/commandWrappers/tarWrapper';
 
 export const keepCache = true;
 
-export let _remoteIsFresh: false; // Exporting this for tests
+let _remoteIsFresh: boolean = false;
 
+export function setRemoteFreshness(val: boolean): void {  // Exporting this for tests
+    _remoteIsFresh = val;
+}
 
-type GitLfsOptions = {
+export type GitLfsOptions = {
     compression: Compression,
     repo: string,
     defaultBranch: string,
@@ -48,10 +51,13 @@ export function validateOptions(options: Partial<GitLfsOptions>) {
 
             if (options.checkLfsAvailability) {
                 gitWrapper.isGitLfsAvailable().then(resolve, () => {
+
                     reject(new gitWrapper.GitLfsNotAvailableError(
                         'git-lfs is not available. Check git-lfs.github.com for docs.'
                     ));
                 });
+            } else {
+                resolve();
             }
         }
     });
@@ -62,14 +68,14 @@ export function pull(hash: string, options: GitLfsOptions, cacheDir: string) {
     return gitWrapper.isGitRepo(repoDir)
         .then(res => {
             if (res) {
-                if (module.exports._remoteIsFresh) {
+                if (_remoteIsFresh) {
                     return Promise.resolve();
                 }
 
                 return gitWrapper.fetch(repoDir).then(() => {});
             } else {
 
-                if (module.exports._remoteIsFresh) {
+                if (_remoteIsFresh) {
                     return Promise.resolve();
                 }
 
@@ -77,7 +83,7 @@ export function pull(hash: string, options: GitLfsOptions, cacheDir: string) {
             }
         })
         .then(() => {
-            module.exports._remoteIsFresh = true;
+            _remoteIsFresh = true;
             return gitWrapper.checkout(repoDir, `veendor-${hash}`)
                 .then(() => {
                     return new Promise((resolve, reject) => {

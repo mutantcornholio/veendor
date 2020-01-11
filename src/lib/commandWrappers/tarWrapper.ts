@@ -40,7 +40,7 @@ class ControlTokenError extends errors.VeendorError {}
 
 export function createStreamArchive(
     inputPaths: string[], compressionType: Compression, {controlToken = {}}: {controlToken: ControlToken}
-): {stream: Readable, promise: Promise<string>} {
+): {stream: NodeJS.ReadableStream, promise: Promise<string>} {
     const baseDir = path.dirname(inputPaths[0]);
     const pathsToAdd = inputPaths.map(p => path.relative(baseDir, p));
     const args = [

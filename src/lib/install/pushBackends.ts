@@ -5,7 +5,7 @@ import {provideBackendCallTools} from '../util/progress';
 import {BackendCalls, BackendConfig} from '@/types';
 
 export default async function pushBackends(
-    backendConfigs: BackendConfig[], hash: string, rePull: boolean): Promise<void> {
+    backendConfigs: BackendConfig[], hash: string, rePull?: boolean): Promise<void> {
     const logger = getLogger();
     logger.trace(`Pushing '${hash}' to backends`);
 

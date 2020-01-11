@@ -8,7 +8,7 @@ import {ControlToken} from '@/lib/commandWrappers/helpers';
 import {BackendToolsProvider} from '@/types';
 
 
-type HttpOptions = {
+export type HttpOptions = {
     compression: Compression,
     resolveUrl: (hash: string) => string | Promise<string>,
     strict: boolean,

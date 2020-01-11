@@ -9,12 +9,13 @@ import {Compression} from '../commandWrappers/tarWrapper';
 import {Readable} from 'stream';
 import {BackendToolsProvider} from '@/types';
 
-type S3Options = {
+export type S3Options = {
     compression: Compression,
     bucket: string,
-    objectAcl: string,
+    objectAcl?: string,
     s3Options: {
-        apiVersion: string,
+        endpoint?: string,
+        apiVersion?: string,
     },
     __s3: AWS.S3,
 }

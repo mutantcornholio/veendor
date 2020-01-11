@@ -4,3 +4,4 @@
 /.idea
 npm-debug.log*
 /test
+/dist/test

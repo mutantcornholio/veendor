@@ -5,7 +5,7 @@ import * as tarWrapper from '../commandWrappers/tarWrapper';
 import * as errors from '../errors';
 import {Compression} from '../commandWrappers/tarWrapper';
 
-type LocalOptions = {
+export type LocalOptions = {
     compression: Compression,
     directory: string,
 }

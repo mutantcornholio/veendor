@@ -5,8 +5,8 @@ import {ProgressStream} from '@/lib/util/progress';
 export type BackendConfig = {
     backend: Backend,
     alias: string,
-    push: boolean,
-    pushMayFail: boolean,
+    push?: boolean,
+    pushMayFail?: boolean,
     options: BackendOptions,
 }
 
@@ -55,4 +55,10 @@ export type PkgJson = {
 
 export type PackageHashOptions = {
     suffix?: (() => string) | string
+}
+
+export function invariant(value: unknown, message = ''): asserts value {
+    if (!Boolean(value)) {
+        throw new Error(`This can not happen ${message}`);
+    }
 }

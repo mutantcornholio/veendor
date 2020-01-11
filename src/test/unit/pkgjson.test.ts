@@ -1,11 +1,13 @@
-const {describe, it, beforeEach, afterEach} = require('mocha');
-const assert = require('chai').assert;
-const sinon = require('sinon');
-const crypto = require('crypto');
-const _ = require('lodash');
+import {afterEach, beforeEach, describe, it} from 'mocha';
 
-const pkgjson = require('@/lib/pkgjson');
-const deepSortedJson = require('@/lib/deepSortedJson');
+import chai from 'chai';
+import sinon from 'sinon';
+import crypto from 'crypto';
+
+import {calcHash} from '@/lib/pkgjson';
+import * as deepSortedJson from '@/lib/deepSortedJson';
+
+const {assert} = chai;
 
 describe('pkgjson', () => {
     describe('#calcHash', () => {
@@ -38,8 +40,11 @@ describe('pkgjson', () => {
 
         const FAKE_HASH = '1234567890deadbeef1234567890';
 
-        let fakeSha1;
-        let sandbox;
+        let fakeSha1: {
+            update(): void,
+            digest(): string,
+        };
+        let sandbox: sinon.SinonSandbox;
 
         beforeEach(function () {
             sandbox = sinon.sandbox.create();
@@ -49,6 +54,7 @@ describe('pkgjson', () => {
                 digest: () => FAKE_HASH
             };
 
+            // @ts-ignore
             sandbox.stub(crypto, 'createHash').callsFake(() => fakeSha1);
 
             sandbox.stub(deepSortedJson, 'transform')
@@ -66,26 +72,29 @@ describe('pkgjson', () => {
         });
 
         it('should create SHA1 hash', () => {
-            pkgjson.calcHash(PKGJSON_CONTENTS);
+            calcHash(PKGJSON_CONTENTS);
+            // @ts-ignore ts-sinon does a very bad job here
             assert(crypto.createHash.calledWith('sha1'), 'crypto.createHash(\'sha1\') hasn\'t been called');
         });
 
         it('should call deepSortedJson with deps and dev-deps from pkgjson', () => {
+            // @ts-ignore
             deepSortedJson.transform.restore();
-            const mock = sandbox.mock(deepSortedJson)
-                .expects('transform')
+            const mock = sandbox.mock(deepSortedJson);
+                mock.expects('transform')
                 .withArgs({
                     dependencies: PKGJSON_CONTENTS.dependencies,
                     devDependencies: PKGJSON_CONTENTS.devDependencies,
                 })
                 .returns(['a.b.c=d']);
 
-            pkgjson.calcHash(PKGJSON_CONTENTS);
+            calcHash(PKGJSON_CONTENTS);
 
             mock.verify();
         });
 
         it('should call deepSortedJson with lockfile contents', () => {
+            // @ts-ignore
             deepSortedJson.transform.restore();
             const mock = sandbox.mock(deepSortedJson);
 
@@ -100,7 +109,7 @@ describe('pkgjson', () => {
                 .withArgs(LOCKFILE_CONTENTS)
                 .returns(['lockfile.b.c=d']);
 
-            pkgjson.calcHash(PKGJSON_CONTENTS, LOCKFILE_CONTENTS);
+            calcHash(PKGJSON_CONTENTS, LOCKFILE_CONTENTS);
 
             mock.verify();
         });
@@ -113,25 +122,25 @@ describe('pkgjson', () => {
                     'lockfile.b.c=d'
                 );
 
-            pkgjson.calcHash(PKGJSON_CONTENTS, LOCKFILE_CONTENTS);
+            calcHash(PKGJSON_CONTENTS, LOCKFILE_CONTENTS);
 
             mock.verify();
         });
 
         it('should return result of SHA1 digest', function () {
-            const result = pkgjson.calcHash(PKGJSON_CONTENTS);
+            const result = calcHash(PKGJSON_CONTENTS);
 
             assert.equal(result, FAKE_HASH);
         });
 
         it('should add string suffixes', () => {
-            const result = pkgjson.calcHash(PKGJSON_CONTENTS, null, {suffix: 'test'});
+            const result = calcHash(PKGJSON_CONTENTS, null, {suffix: 'test'});
 
             assert.equal(result, FAKE_HASH + '-test');
         });
 
         it('should add function suffixes', () => {
-            const result = pkgjson.calcHash(PKGJSON_CONTENTS, null, {suffix: () => 'test'});
+            const result = calcHash(PKGJSON_CONTENTS, null, {suffix: () => 'test'});
 
             assert.equal(result, FAKE_HASH + '-test');
         });
