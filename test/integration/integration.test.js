@@ -125,6 +125,10 @@ describe('veendor', function () {
             return runBashTest('httpPull');
         });
 
+        it('shoud not alter package.json upon install', () => {
+            return runBashTest('noSave');
+        });
+
         describe('s3', () => {
             beforeEach(() => {
                 return fsExtra.emptyDir(path.join(s3Dir, 'testbucket'));

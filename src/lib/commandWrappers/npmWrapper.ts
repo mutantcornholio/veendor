@@ -4,7 +4,7 @@ import {StringMap} from '@/serviceTypes';
 import {StdioPolicy} from '@/lib/commandWrappers/helpers';
 
 export function install(packages: StringMap, timeoutDuration = 0) {
-    const args = ['install'];
+    const args = ['install', '--no-save'];
 
     _.forOwn(packages, (version, pkgname) => {
         args.push(`${pkgname}@${version}`);
@@ -16,7 +16,7 @@ export function install(packages: StringMap, timeoutDuration = 0) {
 }
 
 export function installAll(timeoutDuration = 0) {
-    return helpers.getOutput('npm', ['install'], {
+    return helpers.getOutput('npm', ['install', '--no-save'], {
         timeoutDuration, stdout: StdioPolicy.copy, stderr: StdioPolicy.inherit
     });
 }
