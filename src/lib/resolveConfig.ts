@@ -3,7 +3,7 @@ import path from 'path';
 import {Config} from '@/types';
 
 function resolveConfig(explicitConfig: string): Promise<Config> {
-    global.VEENDOR_VERSION = require('../../package.json').version;
+    global.VEENDOR_VERSION = require('../package.json').version;
 
     return new Promise(resolve => {
         let config;

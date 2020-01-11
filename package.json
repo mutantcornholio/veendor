@@ -1,9 +1,9 @@
 {
   "name": "veendor",
-  "version": "3.0.4",
+  "version": "3.1.1",
   "description": "a tool for stroing your npm dependencies in arbitraty storage",
   "bin": {
-    "veendor": "dist/bin/veendor.js"
+    "veendor": "bin/veendor.js"
   },
   "scripts": {
     "build": "npm run build:1_tsc && npm run build:2_tscpaths && npm run build:3_tests_dirs && npm run build:4_tests_files && npm run build:5_package.json",
@@ -15,8 +15,7 @@
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "mocha --file dist/test/setup.js --reporter dot 'dist/test/unit/**/*.test.js'",
     "test:integration": "mocha --file dist/test/setup.js --reporter dot 'dist/test/integration/**/*.test.js'",
-    "prepublishOnly": "npm run build && npm run test",
-    "publish": "cd dist && npm publish"
+    "publish": "npm run build && npm run test && cd dist && npm publish --access=public"
   },
   "repository": {
     "type": "git",
