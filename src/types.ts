@@ -37,6 +37,7 @@ export type Config = {
     veendorVersion?: string,
     npmVersion?: string,
     dedupe?: boolean,
+    clearSharedCache?: boolean,
 }
 
 export type ConfigWithHistory = Config & {

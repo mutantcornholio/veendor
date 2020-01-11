@@ -14,6 +14,7 @@ import install, {
     PkgJsonNotFoundError
 } from '@/lib/install';
 import * as installHelpers from '@/lib/install/helpers';
+import * as pushBackends from '@/lib/install/pushBackends';
 import * as pkgJson from '@/lib/pkgjson';
 import * as gitWrapper from '@/lib/commandWrappers/gitWrapper';
 import * as npmWrapper from '@/lib/commandWrappers/npmWrapper';
@@ -1106,6 +1107,22 @@ describe('install', () => {
 
             await install({config});
             backendMock0.verify();
+        });
+
+        it('should pass clearSharedCache to `pushBackends(1)`', async () => {
+            config.clearSharedCache = false;
+            const mock = sandbox.mock(pushBackends);
+            mock.expects('pushBackends').withArgs(sinon.match.any, sinon.match.any, sinon.match.any, false);
+            await install({config});
+            mock.verify();
+        });
+
+        it('should pass clearSharedCache to `pushBackends(2)`', async () => {
+            config.clearSharedCache = true;
+            const mock = sandbox.mock(pushBackends);
+            mock.expects('pushBackends').withArgs(sinon.match.any, sinon.match.any, sinon.match.any, true);
+            await install({config});
+            mock.verify();
         });
     });
 });

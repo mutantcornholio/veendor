@@ -80,6 +80,10 @@ export default function validateConfig(config: PartialConfig): Promise<Config> {
         config.dedupe = false;
     }
 
+    if (config.clearSharedCache === undefined) {
+        config.clearSharedCache = false;
+    }
+
     if (config.veendorVersion !== undefined) {
         if (!semver.satisfies(global.VEENDOR_VERSION, config.veendorVersion)) {
             return Promise.reject(new InvalidVeendorVersionError(config.veendorVersion));

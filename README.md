@@ -122,6 +122,13 @@ Example:
 ```js
 veendorVersion: '>=2.1'
 ```
+Please notice that `veendorVersion` option is not supported in veendor before 2.0, so if your team might use 1.x, add this to your .veendor.js:
+
+```js
+if (!global.VEENDOR_VERSION) {
+    throw new Error('veendor version is incompatible, please update');
+}
+```
 
 #### dedupe
 Optional, defaults to `false`
@@ -135,11 +142,13 @@ Example:
 dedupe: true
 ```
 
-Please notice that `veendorVersion` option is not supported in veendor before 2.0, so if your team might use 1.x, add this to your .veendor.js:
+#### clearSharedCache
+Optional, defaults to `false`
+Some software (e.g. babel) uses `node_modules/.cache` as a place for caches. In cases when such software runs in postinstall scripts or just in cases of poor luck, these caches may end up in your veendor bundles.
+If you add `clearSharedCache: true` to your config, veendor will remove said directory from your `node_modules` before each push.
+Example:
 ```js
-if (!global.VEENDOR_VERSION) {
-    throw new Error('veendor version is incompatible, please update');
-}
+clearSharedCache: true
 ```
 
 ### Built-in backends

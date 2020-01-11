@@ -38,7 +38,7 @@ describe('validateConfig', function () {
 
         sandbox = sinon.sandbox.create();
 
-        const veendorVersion = require('../../package.json').version;
+        const veendorVersion = require('../../../package.json').version;
         global.VEENDOR_VERSION = veendorVersion;
     });
 
@@ -284,5 +284,10 @@ describe('validateConfig', function () {
     it('should set default `dedupe` value', async () => {
         const res = await validateConfig(config);
         return assert.equal(res.dedupe, false);
+    });
+
+    it('should set default `clearSharedCache` value', async () => {
+        const res = await validateConfig(config);
+        return assert.equal(res.clearSharedCache, false);
     });
 });

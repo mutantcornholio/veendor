@@ -2,15 +2,19 @@ import {afterEach, beforeEach, describe, it} from 'mocha';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import sinon from 'sinon';
+import mockfs from 'mock-fs';
+import fsExtra from 'fs-extra';
 
-import pushBackends from '@/lib/install/pushBackends';
+import {pushBackends} from '@/lib/install/pushBackends';
 import * as errors from '@/lib/errors';
 
 import * as helpers from '../helpers';
-import {BackendConfig} from '@/types';
+import {BackendConfig, PkgJson} from '@/types';
 
 const assert = chai.assert;
 chai.use(chaiAsPromised);
+
+let PKGJSON: PkgJson;
 
 describe('pushBackends', function () {
     let sandbox: sinon.SinonSandbox;
@@ -22,6 +26,17 @@ describe('pushBackends', function () {
         fakeBackends = [helpers.fakeBackendConfig('fakeBackends[0]'), helpers.fakeBackendConfig('fakeBackends[1]')];
         fakeBackends[0].backend.pull = () => Promise.reject(new errors.BundleNotFoundError);
         fakeBackends[0].push = true;
+
+        PKGJSON = {
+            dependencies: {
+                foo: '2.2.8',
+                c: '2.2.9'
+            },
+            devDependencies: {
+                baz: '6.6.6'
+            }
+        };
+
     });
 
     afterEach(function () {
@@ -41,4 +56,48 @@ describe('pushBackends', function () {
         return assert.isRejected(pushBackends(fakeBackends, fakeSha1), helpers.AnError);
     });
 
+    it('should not clear node_modules/.cache, if `clearSharedCache` is set in config', async () => {
+        mockfs({
+            'package.json': JSON.stringify(PKGJSON),
+            'node_modules': {
+                'left-pad': {
+                    'package.json': '{"a": "b"}',
+                },
+                '.cache': {
+                    'some': 'garbage',
+                }
+            }
+        });
+
+        fakeBackends[0].backend.push = () => fsExtra
+            .stat('node_modules/.cache')
+            .then(
+                () => assert(true, 'cache is not cleared before push'),
+                () => assert(false, 'cache is cleared before push'),
+            );
+
+        await pushBackends(fakeBackends, fakeSha1);
+    });
+    it('should not clear node_modules/.cache, if parameter is not passed', async () => {
+        mockfs({
+            'package.json': JSON.stringify(PKGJSON),
+            'node_modules': {
+                'left-pad': {
+                    'package.json': '{"a": "b"}',
+                },
+                '.cache': {
+                    'some': 'garbage',
+                }
+            }
+        });
+
+        fakeBackends[0].backend.push = () => fsExtra
+            .stat('node_modules/.cache')
+            .then(
+                () => assert(false, 'cache is not cleared before push'),
+                () => assert(true, 'cache is cleared before push'),
+            );
+
+        await pushBackends(fakeBackends, fakeSha1, false, true);
+    });
 });

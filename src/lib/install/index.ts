@@ -2,7 +2,7 @@
 
 import {getLogger} from '@/lib/util/logger';
 import * as helpers from './helpers';
-import pushBackends from './pushBackends';
+import {pushBackends} from './pushBackends';
 import * as rsyncWrapper from '@/lib/commandWrappers/rsyncWrapper';
 import * as npmWrapper from '@/lib/commandWrappers/npmWrapper';
 import * as gitWrapper from '@/lib/commandWrappers/gitWrapper';
@@ -164,7 +164,7 @@ export default async function install(
      * Pushing bundle
      */
     try {
-        await pushBackends(backendsToPush, hash, false);
+        await pushBackends(backendsToPush, hash, false, config.clearSharedCache);
     } catch (pushError) {
         if (pushError instanceof errors.RePullNeeded) {
             // this happens if we failed to push bundle because someone got faster then us
