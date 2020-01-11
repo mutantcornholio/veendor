@@ -34,6 +34,9 @@ const NODE_VERSIONS = [{
 }, {
     nodeVersion: 'v10.9.0',
     npmVersions: ['v6.4.0'],
+}, {
+    nodeVersion: 'v12.14.1',
+    npmVersions: ['v6.13.4'],
 }];
 
 let s3rverInstance;

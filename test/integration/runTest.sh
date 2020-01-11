@@ -31,10 +31,11 @@ mkdir -p "${tmpdir}"
 rm -rf "${cachedir}"
 mkdir -p "${cachedir}"
 
+echo "source nvm.sh"
 set +x
 source "${NVM_DIR}/nvm.sh"
-nvm use "${node_version}-${npm_version}"
 set -x
+nvm use "${node_version}-${npm_version}"
 
 cp "$dirname/testCases/$testcase/package.json" "$tmpdir"
 cp "$dirname/testCases/$testcase/.veendor.js" "$tmpdir"
