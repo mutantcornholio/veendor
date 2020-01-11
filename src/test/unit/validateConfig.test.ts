@@ -280,4 +280,9 @@ describe('validateConfig', function () {
 
         return assert.isFulfilled(validateConfig(config));
     });
+
+    it('should set default `dedupe` value', async () => {
+        const res = await validateConfig(config);
+        return assert.equal(res.dedupe, false);
+    });
 });

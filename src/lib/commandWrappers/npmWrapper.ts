@@ -32,3 +32,9 @@ export function uninstall(packages: string[], timeoutDuration = 0) {
         timeoutDuration, stdout: StdioPolicy.copy, stderr: StdioPolicy.inherit
     });
 }
+
+export function dedupe(timeoutDuration = 0) {
+    return helpers.getOutput('npm', ['dedupe'], {
+        timeoutDuration, stdout: StdioPolicy.copy, stderr: StdioPolicy.inherit
+    });
+}

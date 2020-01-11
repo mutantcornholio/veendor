@@ -28,6 +28,7 @@ enum InstallStages {
     firstPull,
     pullFromGitHistory,
     npmInstallDiff,
+    npmDedupe,
     npmInstallAll,
     pushing,
 }
@@ -104,6 +105,18 @@ export default async function install(
             if (installStage === InstallStages.npmInstallDiff) {
                 await installDiff(tryingPkgJson, pkgJson);
                 backendsToPush = config.backends;
+                if (config.dedupe) {
+                    installStage = InstallStages.npmDedupe;
+                    continue;
+                } else {
+                    installStage = InstallStages.pushing;
+                    break;
+                }
+            }
+
+            if (installStage === InstallStages.npmDedupe) {
+                logger.info(`Running 'npm dedupe'`);
+                await npmWrapper.dedupe();
                 installStage = InstallStages.pushing;
                 break;
             }

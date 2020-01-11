@@ -772,6 +772,32 @@ describe('install', () => {
             npmWrapperMock.verify();
         });
 
+        it('should call `npmWrapper.dedupe` after installing diff, if dedupe is enabled', async () => {
+            fakeBackends[0].backend.pull = (hash) => {
+                if (hash === 'PKGJSONHash' || hash === 'fakePkgJson1Hash') {
+                    return Promise.reject(new errors.BundleNotFoundError);
+                } else if (hash === 'fakePkgJson2Hash') {
+                    return helpers.createNodeModules();
+                } else {
+                    throw new Error('Something is unmocked');
+                }
+            };
+
+            config.dedupe = true;
+            config.backends = [fakeBackends[0]];
+            config.useGitHistory = {
+                depth: 2
+            };
+
+            npmWrapperInstallStub.restore();
+            const npmWrapperMock = sandbox.mock(npmWrapper);
+            npmWrapperMock.expects('install').resolves('');
+            npmWrapperMock.expects('dedupe').resolves('');
+
+            await install({config});
+            npmWrapperMock.verify();
+        });
+
         it('should call `npmWrapper.uninstall` for deleted modules', async () => {
             delete PKGJSON.dependencies.c;
 

@@ -36,6 +36,7 @@ export type Config = {
     backends: BackendConfig[],
     veendorVersion?: string,
     npmVersion?: string,
+    dedupe?: boolean,
 }
 
 export type ConfigWithHistory = Config & {

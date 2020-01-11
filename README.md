@@ -123,6 +123,18 @@ Example:
 veendorVersion: '>=2.1'
 ```
 
+#### dedupe
+Optional, defaults to `false`
+Run `npm dedupe` after each diff install (it doesn't make any sense to run `dedupe` after full install).
+When adding new packages to existing pile, NPM doesn't do a very good job keeping your `node_modules` in check.
+That way, if you've been using diff installations for a long time, you might discover a lot of library duplicates.
+Sometimes you might even get nonfunctional bundles. `dedupe` helps.
+
+Example:
+```js
+dedupe: true
+```
+
 Please notice that `veendorVersion` option is not supported in veendor before 2.0, so if your team might use 1.x, add this to your .veendor.js:
 ```js
 if (!global.VEENDOR_VERSION) {
