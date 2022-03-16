@@ -64,6 +64,11 @@ export default function validateConfig(config: PartialConfig): Promise<Config> {
         }
     }
 
+    if (config.useCI) {
+        config.installDiff = false;
+        config.useGitHistory = undefined;
+    }
+
     if (typeof config.npmVersion === 'string') {
         const npmVersion = config.npmVersion;
         validationPromises.push(

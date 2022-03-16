@@ -88,6 +88,10 @@ packageHash: {
 #### installDiff
 Optional, defaults to `true`. Enables diff installation.
 
+#### useCI
+Optional, defaults to `false`.
+If true, runs `npm ci` instead of `npm install` and forced disables `installDiff` option and ignored `useGitHistory` settings.
+
 #### fallbackToNpm
 Optional, defaults to `true`.  
 If true, runs `npm install` when bundle is not found.  

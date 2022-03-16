@@ -28,6 +28,7 @@ export enum BackendCalls {pull, push, validateOptions}
 
 export type Config = {
     installDiff: boolean,
+    useCI?: boolean,
     fallbackToNpm: boolean,
     packageHash?: PackageHashOptions,
     useGitHistory?: {
