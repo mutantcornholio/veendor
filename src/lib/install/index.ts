@@ -122,7 +122,7 @@ export default async function install(
             }
 
             if (installStage === InstallStages.npmInstallAll) {
-                await npmInstallAll();
+                await npmInstallAll(config.useCI);
                 backendsToPush = config.backends;
                 installStage = InstallStages.pushing;
                 break;
@@ -295,12 +295,12 @@ async function installDiff(oldPkgJson: PkgJson, newPkgJson: PkgJson): Promise<vo
     }
 }
 
-function npmInstallAll() {
+function npmInstallAll(useCI?: boolean) {
     const logger = getLogger();
 
     logger.info('Couldn\'t find bundles. Running npm install');
 
-    return npmWrapper.installAll();
+    return npmWrapper.installAll(useCI);
 }
 
 export class PkgJsonNotFoundError extends errors.VeendorError {}

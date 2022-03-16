@@ -290,4 +290,17 @@ describe('validateConfig', function () {
         const res = await validateConfig(config);
         return assert.equal(res.clearSharedCache, false);
     });
+
+    it('should set useCI to true and disables installDiff, useGitHistory', async () => {
+        const res = await validateConfig({
+            ...config,
+            useCI: true,
+            installDiff: true,
+            useGitHistory: {depth: 1},
+        });
+
+        assert.equal(res.useCI, true);
+        assert.equal(res.installDiff, false);
+        assert.equal(res.useGitHistory, undefined);
+    });
 });

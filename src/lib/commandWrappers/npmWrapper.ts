@@ -15,8 +15,8 @@ export function install(packages: StringMap, timeoutDuration = 0) {
     });
 }
 
-export function installAll(timeoutDuration = 0) {
-    return helpers.getOutput('npm', ['install', '--no-save'], {
+export function installAll(useCI = false, timeoutDuration = 0) {
+    return helpers.getOutput('npm', [useCI ? 'ci' : 'install', '--no-save'], {
         timeoutDuration, stdout: StdioPolicy.copy, stderr: StdioPolicy.inherit
     });
 }
